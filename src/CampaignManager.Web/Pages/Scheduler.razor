@@ -1,10 +1,24 @@
 @page "/scheduler"
 @attribute [Authorize(Roles = "SuperAdmin,SubAdmin,Supervisor")]
 @inject IApiService ApiService
+@using System.Timers
 
 <PageTitle>Scheduler & Monitor - Campaign Manager</PageTitle>
 
-<h1>Scheduler & Monitor</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Scheduler & Monitor</h1>
+    <div>
+        <span class="text-muted me-2">Auto-refresh: </span>
+        <div class="btn-group">
+            <button class="btn btn-sm @(autoRefresh ? "btn-success" : "btn-outline-secondary")" @onclick="ToggleAutoRefresh">
+                <i class="bi bi-arrow-repeat"></i> @(autoRefresh ? "On" : "Off")
+            </button>
+            <button class="btn btn-sm btn-outline-primary" @onclick="LoadData">
+                <i class="bi bi-arrow-clockwise"></i> Refresh Now
+            </button>
+        </div>
+    </div>
+</div>
 
 @if (isLoading)
 {
@@ -19,63 +33,135 @@ else if (campaigns?.Items != null)
     <div class="row">
         @foreach (var campaign in campaigns.Items)
         {
-            <div class="col-md-6 mb-4">
-                <div class="card">
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">@campaign.Name</h5>
                         <div>
-                            <span class="badge @(campaign.SchedulerEnabled ? "bg-success" : "bg-secondary") me-2">
+                            <h5 class="mb-0">@campaign.Name</h5>
+                            <small class="text-muted">Channels: @GetChannelsDisplay(campaign.Channels)</small>
+                        </div>
+                        <div>
+                            <span class="badge @(campaign.Status == CampaignStatus.Active ? "bg-success" : "bg-secondary") me-2">
+                                @campaign.Status
+                            </span>
+                            <span class="badge @(campaign.SchedulerEnabled ? "bg-primary" : "bg-secondary") me-2">
                                 @(campaign.SchedulerEnabled ? "Scheduler On" : "Scheduler Off")
                             </span>
                             <button class="btn btn-sm @(campaign.SchedulerEnabled ? "btn-danger" : "btn-success")" 
                                     @onclick="() => ToggleScheduler(campaign.Id, !campaign.SchedulerEnabled)">
-                                @(campaign.SchedulerEnabled ? "Turn Off" : "Turn On")
+                                @(campaign.SchedulerEnabled ? "Stop" : "Start")
                             </button>
                         </div>
                     </div>
                     <div class="card-body">
                         @{
                             var stats = campaignStats.FirstOrDefault(s => s.CampaignId == campaign.Id);
+                            var queue = queueStatuses.FirstOrDefault(q => q.CampaignId == campaign.Id);
                         }
                         @if (stats != null)
                         {
-                            <div class="row text-center">
-                                <div class="col">
-                                    <h6>Total</h6>
-                                    <h4>@stats.TotalLeads</h4>
+                            <div class="row text-center mb-3">
+                                <div class="col-3">
+                                    <div class="border rounded p-2 bg-light">
+                                        <small class="text-muted d-block">Total Leads</small>
+                                        <h4 class="mb-0">@stats.TotalLeads</h4>
+                                    </div>
                                 </div>
-                                <div class="col">
-                                    <h6>Queued</h6>
-                                    <h4 class="text-warning">@stats.QueuedCount</h4>
+                                <div class="col-3">
+                                    <div class="border rounded p-2 bg-warning bg-opacity-10">
+                                        <small class="text-muted d-block">Queued</small>
+                                        <h4 class="mb-0 text-warning">@stats.QueuedCount</h4>
+                                    </div>
                                 </div>
-                                <div class="col">
-                                    <h6>Email Queue</h6>
-                                    <h4 class="text-info">@stats.EmailPendingCount</h4>
+                                <div class="col-3">
+                                    <div class="border rounded p-2 bg-info bg-opacity-10">
+                                        <small class="text-muted d-block">In Progress</small>
+                                        <h4 class="mb-0 text-info">@stats.InProgressCount</h4>
+                                    </div>
                                 </div>
-                                <div class="col">
-                                    <h6>Voice Queue</h6>
-                                    <h4 class="text-primary">@stats.CallPendingCount</h4>
-                                </div>
-                            </div>
-                            <hr />
-                            <div class="row text-center">
-                                <div class="col">
-                                    <h6>Dialed</h6>
-                                    <h4>@stats.DialedCount</h4>
-                                </div>
-                                <div class="col">
-                                    <h6>Connected</h6>
-                                    <h4 class="text-success">@stats.ConnectedCount</h4>
-                                </div>
-                                <div class="col">
-                                    <h6>RPC</h6>
-                                    <h4 class="text-success">@stats.RightPartyContactCount</h4>
-                                </div>
-                                <div class="col">
-                                    <h6>Disposed</h6>
-                                    <h4 class="text-info">@stats.DisposedCount</h4>
+                                <div class="col-3">
+                                    <div class="border rounded p-2 bg-success bg-opacity-10">
+                                        <small class="text-muted d-block">Disposed</small>
+                                        <h4 class="mb-0 text-success">@stats.DisposedCount</h4>
+                                    </div>
                                 </div>
                             </div>
+
+                            @* Email Queue Section *@
+                            @if ((campaign.Channels & ChannelType.Email) == ChannelType.Email)
+                            {
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="mb-0"><i class="bi bi-envelope text-primary"></i> Email Queue</h6>
+                                        <span class="badge bg-primary">@stats.EmailPendingCount pending</span>
+                                    </div>
+                                    <div class="progress" style="height: 20px;">
+                                        @{
+                                            var emailTotal = stats.TotalLeads > 0 ? stats.TotalLeads : 1;
+                                            var emailSentPct = Math.Round((double)stats.EmailSentCount / emailTotal * 100);
+                                            var emailFailedPct = Math.Round((double)stats.EmailFailedCount / emailTotal * 100);
+                                        }
+                                        <div class="progress-bar bg-success" style="width: @emailSentPct%">
+                                            Sent: @stats.EmailSentCount
+                                        </div>
+                                        <div class="progress-bar bg-danger" style="width: @emailFailedPct%">
+                                            Failed: @stats.EmailFailedCount
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
+                            @* Voice Queue Section *@
+                            @if ((campaign.Channels & ChannelType.Call) == ChannelType.Call)
+                            {
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="mb-0"><i class="bi bi-telephone text-success"></i> Voice Queue</h6>
+                                        <span class="badge bg-success">@stats.CallPendingCount pending</span>
+                                    </div>
+                                    <div class="row text-center small">
+                                        <div class="col">
+                                            <div class="border rounded p-1">
+                                                <div class="text-muted">Dialed</div>
+                                                <strong>@stats.DialedCount</strong>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="border rounded p-1 bg-info bg-opacity-10">
+                                                <div class="text-muted">Connected</div>
+                                                <strong class="text-info">@stats.ConnectedCount</strong>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="border rounded p-1 bg-success bg-opacity-10">
+                                                <div class="text-muted">RPC</div>
+                                                <strong class="text-success">@stats.RightPartyContactCount</strong>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="border rounded p-1">
+                                                <div class="text-muted">No Answer</div>
+                                                <strong>@stats.NoAnswerCount</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
+                            @* Queue Status Details *@
+                            @if (queue != null)
+                            {
+                                <div class="alert alert-light small mb-0">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <strong>Last Processed:</strong> @(queue.LastProcessedAt?.ToString("HH:mm:ss") ?? "Never")
+                                        </div>
+                                        <div class="col-md-6">
+                                            <strong>Next Run:</strong> @(queue.NextScheduledAt?.ToString("HH:mm:ss") ?? "Not scheduled")
+                                        </div>
+                                    </div>
+                                </div>
+                            }
                         }
                         else
                         {
@@ -95,7 +181,10 @@ else
 @code {
     private PagedResult<CampaignDto>? campaigns;
     private List<CampaignStatsDto> campaignStats = new();
+    private List<QueueStatusDto> queueStatuses = new();
     private bool isLoading = true;
+    private bool autoRefresh = false;
+    private Timer? refreshTimer;
 
     protected override async Task OnInitializedAsync()
     {
@@ -108,6 +197,8 @@ else
         try
         {
             campaigns = await ApiService.GetAsync<PagedResult<CampaignDto>>("campaigns");
+            campaignStats.Clear();
+            queueStatuses.Clear();
             
             if (campaigns?.Items != null)
             {
@@ -117,6 +208,12 @@ else
                     if (stats != null)
                     {
                         campaignStats.Add(stats);
+                    }
+
+                    var queue = await ApiService.GetAsync<QueueStatusDto>($"campaigns/{campaign.Id}/queue-status");
+                    if (queue != null)
+                    {
+                        queueStatuses.Add(queue);
                     }
                 }
             }
@@ -132,5 +229,43 @@ else
     {
         await ApiService.PostAsync<ApiResponse<bool>>($"campaigns/{campaignId}/scheduler/toggle?enable={enable}");
         await LoadData();
+    }
+
+    private void ToggleAutoRefresh()
+    {
+        autoRefresh = !autoRefresh;
+        if (autoRefresh)
+        {
+            refreshTimer = new Timer(30000); // 30 seconds
+            refreshTimer.Elapsed += async (sender, e) => await InvokeAsync(async () =>
+            {
+                await LoadData();
+                StateHasChanged();
+            });
+            refreshTimer.Start();
+        }
+        else
+        {
+            refreshTimer?.Stop();
+            refreshTimer?.Dispose();
+            refreshTimer = null;
+        }
+    }
+
+    private string GetChannelsDisplay(ChannelType channels)
+    {
+        var channelList = new List<string>();
+        if ((channels & ChannelType.Email) == ChannelType.Email) channelList.Add("Email");
+        if ((channels & ChannelType.Call) == ChannelType.Call) channelList.Add("Call");
+        if ((channels & ChannelType.VoiceBot) == ChannelType.VoiceBot) channelList.Add("VoiceBot");
+        if ((channels & ChannelType.WhatsApp) == ChannelType.WhatsApp) channelList.Add("WhatsApp");
+        if ((channels & ChannelType.SMS) == ChannelType.SMS) channelList.Add("SMS");
+        return channelList.Count > 0 ? string.Join(", ", channelList) : "None";
+    }
+
+    public void Dispose()
+    {
+        refreshTimer?.Stop();
+        refreshTimer?.Dispose();
     }
 }

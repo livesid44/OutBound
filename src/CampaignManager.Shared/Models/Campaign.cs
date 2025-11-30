@@ -4,15 +4,17 @@ using System.ComponentModel.DataAnnotations.Schema;
 namespace CampaignManager.Shared.Models;
 
 /// <summary>
-/// Communication channel types for campaigns
+/// Communication channel types for campaigns (can be combined as flags)
 /// </summary>
+[Flags]
 public enum ChannelType
 {
-    Email = 0,
-    Call = 1,
-    VoiceBot = 2,
-    WhatsApp = 3,
-    SMS = 4
+    None = 0,
+    Email = 1,
+    Call = 2,
+    VoiceBot = 4,
+    WhatsApp = 8,
+    SMS = 16
 }
 
 /// <summary>
@@ -45,7 +47,20 @@ public class Campaign
     [MaxLength(2000)]
     public string? Description { get; set; }
 
-    public ChannelType Channel { get; set; } = ChannelType.Email;
+    /// <summary>
+    /// Channels enabled for this campaign (can be multiple)
+    /// </summary>
+    public ChannelType Channels { get; set; } = ChannelType.Email;
+
+    /// <summary>
+    /// Legacy single channel property for backward compatibility
+    /// </summary>
+    [NotMapped]
+    public ChannelType Channel
+    {
+        get => Channels;
+        set => Channels = value;
+    }
 
     public CampaignStatus Status { get; set; } = CampaignStatus.Draft;
 

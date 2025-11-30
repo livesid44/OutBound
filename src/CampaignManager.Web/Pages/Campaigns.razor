@@ -27,7 +27,7 @@ else
             <thead>
                 <tr>
                     <th>Name</th>
-                    <th>Channel</th>
+                    <th>Channels</th>
                     <th>Status</th>
                     <th>Leads</th>
                     <th>Scheduler</th>
@@ -42,7 +42,7 @@ else
                     {
                         <tr>
                             <td>@campaign.Name</td>
-                            <td>@campaign.Channel</td>
+                            <td>@GetChannelsDisplay(campaign.Channels)</td>
                             <td>
                                 <span class="badge @GetStatusBadgeClass(campaign.Status)">
                                     @campaign.Status
@@ -74,7 +74,7 @@ else
 @if (showCreateModal)
 {
     <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5)">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Create Campaign</h5>
@@ -93,14 +93,61 @@ else
                             <InputTextArea class="form-control" @bind-Value="newCampaign.Description" rows="3" />
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Channel</label>
-                            <InputSelect class="form-select" @bind-Value="newCampaign.Channel">
-                                <option value="@ChannelType.Email">Email</option>
-                                <option value="@ChannelType.Call">Call</option>
-                                <option value="@ChannelType.VoiceBot">Voice Bot (Coming Soon)</option>
-                                <option value="@ChannelType.WhatsApp">WhatsApp (Coming Soon)</option>
-                                <option value="@ChannelType.SMS">SMS (Coming Soon)</option>
-                            </InputSelect>
+                            <label class="form-label">Select Channels (Multiple Allowed)</label>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="chkEmail" 
+                                               checked="@HasChannel(ChannelType.Email)" 
+                                               @onchange="@(e => ToggleChannel(ChannelType.Email, (bool)e.Value!))" />
+                                        <label class="form-check-label" for="chkEmail">
+                                            <i class="bi bi-envelope"></i> Email
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="chkCall" 
+                                               checked="@HasChannel(ChannelType.Call)" 
+                                               @onchange="@(e => ToggleChannel(ChannelType.Call, (bool)e.Value!))" />
+                                        <label class="form-check-label" for="chkCall">
+                                            <i class="bi bi-telephone"></i> Call
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="chkVoiceBot" 
+                                               checked="@HasChannel(ChannelType.VoiceBot)" 
+                                               @onchange="@(e => ToggleChannel(ChannelType.VoiceBot, (bool)e.Value!))" disabled />
+                                        <label class="form-check-label text-muted" for="chkVoiceBot">
+                                            <i class="bi bi-robot"></i> Voice Bot (Coming Soon)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="chkWhatsApp" 
+                                               checked="@HasChannel(ChannelType.WhatsApp)" 
+                                               @onchange="@(e => ToggleChannel(ChannelType.WhatsApp, (bool)e.Value!))" disabled />
+                                        <label class="form-check-label text-muted" for="chkWhatsApp">
+                                            <i class="bi bi-whatsapp"></i> WhatsApp (Coming Soon)
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input" id="chkSMS" 
+                                               checked="@HasChannel(ChannelType.SMS)" 
+                                               @onchange="@(e => ToggleChannel(ChannelType.SMS, (bool)e.Value!))" disabled />
+                                        <label class="form-check-label text-muted" for="chkSMS">
+                                            <i class="bi bi-chat-dots"></i> SMS (Coming Soon)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -124,7 +171,7 @@ else
     private bool isLoading = true;
     private bool showCreateModal = false;
     private bool isCreating = false;
-    private CreateCampaignRequest newCampaign = new();
+    private CreateCampaignRequest newCampaign = new() { Channels = ChannelType.Email };
 
     protected override async Task OnInitializedAsync()
     {
@@ -147,7 +194,7 @@ else
 
     private void ShowCreateModal()
     {
-        newCampaign = new CreateCampaignRequest();
+        newCampaign = new CreateCampaignRequest { Channels = ChannelType.Email };
         showCreateModal = true;
     }
 
@@ -156,8 +203,31 @@ else
         showCreateModal = false;
     }
 
+    private bool HasChannel(ChannelType channel)
+    {
+        return (newCampaign.Channels & channel) == channel;
+    }
+
+    private void ToggleChannel(ChannelType channel, bool isChecked)
+    {
+        if (isChecked)
+        {
+            newCampaign.Channels |= channel;
+        }
+        else
+        {
+            newCampaign.Channels &= ~channel;
+        }
+    }
+
     private async Task CreateCampaign()
     {
+        // Ensure at least one channel is selected
+        if (newCampaign.Channels == ChannelType.None)
+        {
+            newCampaign.Channels = ChannelType.Email;
+        }
+
         isCreating = true;
         try
         {
@@ -183,6 +253,17 @@ else
     private void DesignCampaign(Guid id)
     {
         Navigation.NavigateTo($"/campaigns/{id}/design");
+    }
+
+    private string GetChannelsDisplay(ChannelType channels)
+    {
+        var channelList = new List<string>();
+        if ((channels & ChannelType.Email) == ChannelType.Email) channelList.Add("Email");
+        if ((channels & ChannelType.Call) == ChannelType.Call) channelList.Add("Call");
+        if ((channels & ChannelType.VoiceBot) == ChannelType.VoiceBot) channelList.Add("VoiceBot");
+        if ((channels & ChannelType.WhatsApp) == ChannelType.WhatsApp) channelList.Add("WhatsApp");
+        if ((channels & ChannelType.SMS) == ChannelType.SMS) channelList.Add("SMS");
+        return channelList.Count > 0 ? string.Join(", ", channelList) : "None";
     }
 
     private string GetStatusBadgeClass(CampaignStatus status) => status switch

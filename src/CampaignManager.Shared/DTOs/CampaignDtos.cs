@@ -8,7 +8,14 @@ public class CampaignDto
     public Guid ProjectId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public ChannelType Channel { get; set; }
+    /// <summary>
+    /// Multiple channels enabled for this campaign (flags enum)
+    /// </summary>
+    public ChannelType Channels { get; set; }
+    /// <summary>
+    /// Legacy single channel property for backward compatibility
+    /// </summary>
+    public ChannelType Channel { get => Channels; set => Channels = value; }
     public CampaignStatus Status { get; set; }
     public bool SchedulerEnabled { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -23,14 +30,22 @@ public class CreateCampaignRequest
 {
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public ChannelType Channel { get; set; }
+    /// <summary>
+    /// Multiple channels to enable (can combine: Email | Call)
+    /// </summary>
+    public ChannelType Channels { get; set; } = ChannelType.Email;
+    /// <summary>
+    /// Legacy single channel property for backward compatibility
+    /// </summary>
+    public ChannelType Channel { get => Channels; set => Channels = value; }
 }
 
 public class UpdateCampaignRequest
 {
     public string? Name { get; set; }
     public string? Description { get; set; }
-    public ChannelType? Channel { get; set; }
+    public ChannelType? Channels { get; set; }
+    public ChannelType? Channel { get => Channels; set => Channels = value; }
     public CampaignStatus? Status { get; set; }
     public bool? SchedulerEnabled { get; set; }
 }
@@ -61,6 +76,8 @@ public class CampaignApiConfigDto
     public string? SendGridFromEmail { get; set; }
     public string? SendGridFromName { get; set; }
     public string? SendGridTemplateId { get; set; }
+    public string? EmailTemplateHtml { get; set; }
+    public string? EmailSubject { get; set; }
     public string? WebExCurl { get; set; }
     public string? WebExApiEndpoint { get; set; }
     public string? WebExAuthToken { get; set; }
@@ -74,6 +91,8 @@ public class UpdateApiConfigRequest
     public string? SendGridFromEmail { get; set; }
     public string? SendGridFromName { get; set; }
     public string? SendGridTemplateId { get; set; }
+    public string? EmailTemplateHtml { get; set; }
+    public string? EmailSubject { get; set; }
     public string? WebExCurl { get; set; }
     public string? WebExApiEndpoint { get; set; }
     public string? WebExAuthToken { get; set; }

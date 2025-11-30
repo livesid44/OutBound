@@ -2,6 +2,7 @@
 @attribute [Authorize(Roles = "SuperAdmin,SubAdmin,Supervisor")]
 @inject IApiService ApiService
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <PageTitle>Design Campaign - Campaign Manager</PageTitle>
 
@@ -34,7 +35,7 @@ else if (campaign != null)
                             <p><strong>Description:</strong> @(campaign.Description ?? "N/A")</p>
                         </div>
                         <div class="col-md-6">
-                            <p><strong>Channel:</strong> @campaign.Channel</p>
+                            <p><strong>Channels:</strong> @GetChannelsDisplay(campaign.Channels)</p>
                             <p><strong>Created:</strong> @campaign.CreatedAt.ToString("yyyy-MM-dd HH:mm")</p>
                         </div>
                     </div>
@@ -89,58 +90,143 @@ else if (campaign != null)
                     <h5 class="mb-0">Step 3: Configure API</h5>
                 </div>
                 <div class="card-body">
-                    @if (campaign.Channel == ChannelType.Email)
+                    @* Email Configuration Section *@
+                    @if (HasChannel(ChannelType.Email))
                     {
-                        <h6>SendGrid Configuration</h6>
-                        <EditForm Model="@apiConfig" OnValidSubmit="SaveApiConfig">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">API Key</label>
-                                    <InputText class="form-control" @bind-Value="apiConfig.SendGridApiKey" type="password" />
+                        <div class="mb-4">
+                            <h6 class="text-primary"><i class="bi bi-envelope"></i> Email Configuration (SendGrid)</h6>
+                            <hr />
+                            <EditForm Model="@apiConfig" OnValidSubmit="SaveApiConfig">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">SendGrid API Key</label>
+                                        <InputText class="form-control" @bind-Value="apiConfig.SendGridApiKey" type="password" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">From Email</label>
+                                        <InputText class="form-control" @bind-Value="apiConfig.SendGridFromEmail" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">From Name</label>
+                                        <InputText class="form-control" @bind-Value="apiConfig.SendGridFromName" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Template ID (optional - use for pre-built templates)</label>
+                                        <InputText class="form-control" @bind-Value="apiConfig.SendGridTemplateId" />
+                                    </div>
                                 </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">From Email</label>
-                                    <InputText class="form-control" @bind-Value="apiConfig.SendGridFromEmail" />
+
+                                @* Email Subject with Field Picker *@
+                                <div class="mb-3">
+                                    <label class="form-label">Email Subject</label>
+                                    <div class="input-group">
+                                        <InputText class="form-control" @bind-Value="apiConfig.EmailSubject" placeholder="Enter subject line. Use {{FieldName}} for dynamic fields" />
+                                        <div class="dropdown">
+                                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                Insert Field
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                @foreach (var field in campaign.Fields)
+                                                {
+                                                    <li><a class="dropdown-item" href="javascript:void(0)" @onclick="() => InsertFieldToSubject(field.FieldName)">@field.DisplayName ({{@field.FieldName}})</a></li>
+                                                }
+                                            </ul>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">From Name</label>
-                                    <InputText class="form-control" @bind-Value="apiConfig.SendGridFromName" />
+
+                                @* HTML Email Template Designer *@
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label mb-0">Email Template (HTML)</label>
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn @(showHtmlEditor ? "btn-primary" : "btn-outline-primary")" @onclick="() => showHtmlEditor = true">
+                                                Edit HTML
+                                            </button>
+                                            <button type="button" class="btn @(!showHtmlEditor ? "btn-primary" : "btn-outline-primary")" @onclick="() => showHtmlEditor = false">
+                                                Preview
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    @* Field Picker Panel *@
+                                    <div class="card mb-2 bg-light">
+                                        <div class="card-body py-2">
+                                            <small class="text-muted d-block mb-1">Click to insert dynamic field placeholders:</small>
+                                            <div class="d-flex flex-wrap gap-1">
+                                                @foreach (var field in campaign.Fields)
+                                                {
+                                                    <button type="button" class="btn btn-sm btn-outline-info" @onclick="() => InsertFieldToTemplate(field.FieldName)">
+                                                        {{@field.FieldName}}
+                                                    </button>
+                                                }
+                                                @if (!campaign.Fields.Any())
+                                                {
+                                                    <span class="text-muted">No fields defined. Add fields in Step 2 first.</span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    @if (showHtmlEditor)
+                                    {
+                                        <InputTextArea class="form-control font-monospace" @bind-Value="apiConfig.EmailTemplateHtml" rows="15" 
+                                                       placeholder="Enter your HTML email template here. Use {{FieldName}} for dynamic content." />
+                                    }
+                                    else
+                                    {
+                                        <div class="border rounded p-3 bg-white" style="min-height: 300px;">
+                                            @if (!string.IsNullOrEmpty(apiConfig.EmailTemplateHtml))
+                                            {
+                                                @((MarkupString)GetPreviewHtml())
+                                            }
+                                            else
+                                            {
+                                                <p class="text-muted">No template content yet. Switch to Edit HTML to create your email template.</p>
+                                            }
+                                        </div>
+                                    }
+                                    <small class="text-muted">Use {{FieldName}} syntax to insert dynamic lead data. Example: Hello {{FirstName}}, your account {{AccountNumber}} is ready.</small>
                                 </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Template ID</label>
-                                    <InputText class="form-control" @bind-Value="apiConfig.SendGridTemplateId" />
-                                </div>
-                            </div>
-                            <button type="submit" class="btn btn-success">Save Email Config</button>
-                        </EditForm>
+
+                                <button type="submit" class="btn btn-success">Save Email Configuration</button>
+                            </EditForm>
+                        </div>
                     }
-                    else if (campaign.Channel == ChannelType.Call)
+
+                    @* Voice/Call Configuration Section *@
+                    @if (HasChannel(ChannelType.Call))
                     {
-                        <h6>WebEx Configuration</h6>
-                        <EditForm Model="@apiConfig" OnValidSubmit="SaveApiConfig">
-                            <div class="mb-3">
-                                <label class="form-label">API Endpoint</label>
-                                <InputText class="form-control" @bind-Value="apiConfig.WebExApiEndpoint" />
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Auth Token</label>
-                                <InputText class="form-control" @bind-Value="apiConfig.WebExAuthToken" type="password" />
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">CURL Command</label>
-                                <InputTextArea class="form-control" @bind-Value="apiConfig.WebExCurl" rows="3" />
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Parameter Mappings (JSON)</label>
-                                <InputTextArea class="form-control" @bind-Value="apiConfig.ParameterMappings" rows="5" />
-                                <small class="text-muted">Map JSON parameters to feed fields</small>
-                            </div>
-                            <button type="submit" class="btn btn-success">Save Voice Config</button>
-                        </EditForm>
+                        <div class="mb-4">
+                            <h6 class="text-success"><i class="bi bi-telephone"></i> Voice Configuration (WebEx)</h6>
+                            <hr />
+                            <EditForm Model="@apiConfig" OnValidSubmit="SaveApiConfig">
+                                <div class="mb-3">
+                                    <label class="form-label">API Endpoint</label>
+                                    <InputText class="form-control" @bind-Value="apiConfig.WebExApiEndpoint" />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Auth Token</label>
+                                    <InputText class="form-control" @bind-Value="apiConfig.WebExAuthToken" type="password" />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">CURL Command</label>
+                                    <InputTextArea class="form-control font-monospace" @bind-Value="apiConfig.WebExCurl" rows="4" />
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Parameter Mappings (JSON)</label>
+                                    <InputTextArea class="form-control font-monospace" @bind-Value="apiConfig.ParameterMappings" rows="6" 
+                                                   placeholder='{"phone_number": "{{PhoneNumber}}", "customer_name": "{{FirstName}} {{LastName}}"}'/>
+                                    <small class="text-muted">Map API parameters to lead fields using {{FieldName}} syntax</small>
+                                </div>
+                                <button type="submit" class="btn btn-success">Save Voice Configuration</button>
+                            </EditForm>
+                        </div>
                     }
-                    else
+
+                    @if (!HasChannel(ChannelType.Email) && !HasChannel(ChannelType.Call))
                     {
-                        <p class="text-muted">Channel @campaign.Channel is coming soon!</p>
+                        <p class="text-muted">Selected channels are coming soon!</p>
                     }
                 </div>
             </div>
@@ -152,22 +238,28 @@ else if (campaign != null)
                 <div class="card-body">
                     <EditForm Model="@strategy" OnValidSubmit="SaveStrategy">
                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Max Email Attempts</label>
-                                <InputNumber class="form-control" @bind-Value="strategy.MaxEmailAttempts" />
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Max Call Attempts</label>
-                                <InputNumber class="form-control" @bind-Value="strategy.MaxCallAttempts" />
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Email Retry Interval (minutes)</label>
-                                <InputNumber class="form-control" @bind-Value="strategy.EmailRetryIntervalMinutes" />
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Call Retry Interval (minutes)</label>
-                                <InputNumber class="form-control" @bind-Value="strategy.CallRetryIntervalMinutes" />
-                            </div>
+                            @if (HasChannel(ChannelType.Email))
+                            {
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Max Email Attempts</label>
+                                    <InputNumber class="form-control" @bind-Value="strategy.MaxEmailAttempts" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Email Retry Interval (minutes)</label>
+                                    <InputNumber class="form-control" @bind-Value="strategy.EmailRetryIntervalMinutes" />
+                                </div>
+                            }
+                            @if (HasChannel(ChannelType.Call))
+                            {
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Max Call Attempts</label>
+                                    <InputNumber class="form-control" @bind-Value="strategy.MaxCallAttempts" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Call Retry Interval (minutes)</label>
+                                    <InputNumber class="form-control" @bind-Value="strategy.CallRetryIntervalMinutes" />
+                                </div>
+                            }
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Working Days</label>
                                 <InputText class="form-control" @bind-Value="strategy.WorkingDays" placeholder="Mon,Tue,Wed,Thu,Fri" />
@@ -245,6 +337,7 @@ else if (campaign != null)
     private CreateCampaignFieldRequest newField = new();
     private bool isLoading = true;
     private bool showFieldModal = false;
+    private bool showHtmlEditor = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -265,6 +358,8 @@ else if (campaign != null)
                     SendGridFromEmail = campaign.ApiConfig.SendGridFromEmail,
                     SendGridFromName = campaign.ApiConfig.SendGridFromName,
                     SendGridTemplateId = campaign.ApiConfig.SendGridTemplateId,
+                    EmailTemplateHtml = campaign.ApiConfig.EmailTemplateHtml,
+                    EmailSubject = campaign.ApiConfig.EmailSubject,
                     WebExApiEndpoint = campaign.ApiConfig.WebExApiEndpoint,
                     WebExAuthToken = campaign.ApiConfig.WebExAuthToken,
                     WebExCurl = campaign.ApiConfig.WebExCurl,
@@ -288,6 +383,46 @@ else if (campaign != null)
         {
             isLoading = false;
         }
+    }
+
+    private bool HasChannel(ChannelType channel)
+    {
+        return campaign != null && (campaign.Channels & channel) == channel;
+    }
+
+    private string GetChannelsDisplay(ChannelType channels)
+    {
+        var channelList = new List<string>();
+        if ((channels & ChannelType.Email) == ChannelType.Email) channelList.Add("Email");
+        if ((channels & ChannelType.Call) == ChannelType.Call) channelList.Add("Call");
+        if ((channels & ChannelType.VoiceBot) == ChannelType.VoiceBot) channelList.Add("VoiceBot");
+        if ((channels & ChannelType.WhatsApp) == ChannelType.WhatsApp) channelList.Add("WhatsApp");
+        if ((channels & ChannelType.SMS) == ChannelType.SMS) channelList.Add("SMS");
+        return channelList.Count > 0 ? string.Join(", ", channelList) : "None";
+    }
+
+    private void InsertFieldToSubject(string fieldName)
+    {
+        apiConfig.EmailSubject = (apiConfig.EmailSubject ?? "") + "{{" + fieldName + "}}";
+    }
+
+    private void InsertFieldToTemplate(string fieldName)
+    {
+        apiConfig.EmailTemplateHtml = (apiConfig.EmailTemplateHtml ?? "") + "{{" + fieldName + "}}";
+    }
+
+    private string GetPreviewHtml()
+    {
+        var html = apiConfig.EmailTemplateHtml ?? "";
+        // Replace field placeholders with sample values for preview
+        if (campaign?.Fields != null)
+        {
+            foreach (var field in campaign.Fields)
+            {
+                html = html.Replace("{{" + field.FieldName + "}}", $"<span class='badge bg-info'>[{field.DisplayName}]</span>");
+            }
+        }
+        return html;
     }
 
     private void ShowAddFieldModal()

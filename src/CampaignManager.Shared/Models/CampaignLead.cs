@@ -16,7 +16,10 @@ public enum LeadStatus
     Connected = 5,
     RightPartyContact = 6,
     Disposed = 7,
-    Failed = 8
+    Failed = 8,
+    NoAnswer = 9,
+    Busy = 10,
+    Voicemail = 11
 }
 
 /// <summary>

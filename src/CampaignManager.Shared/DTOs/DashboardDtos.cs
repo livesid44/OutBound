@@ -8,11 +8,14 @@ public class CampaignStatsDto
     public string CampaignName { get; set; } = string.Empty;
     public int TotalLeads { get; set; }
     public int QueuedCount { get; set; }
+    public int InProgressCount { get; set; }
     public int EmailPendingCount { get; set; }
     public int EmailSentCount { get; set; }
+    public int EmailFailedCount { get; set; }
     public int CallPendingCount { get; set; }
     public int DialedCount { get; set; }
     public int ConnectedCount { get; set; }
+    public int NoAnswerCount { get; set; }
     public int RightPartyContactCount { get; set; }
     public int DisposedCount { get; set; }
     public int FailedCount { get; set; }
@@ -20,8 +23,11 @@ public class CampaignStatsDto
 
 public class QueueStatusDto
 {
+    public Guid CampaignId { get; set; }
     public int EmailQueueCount { get; set; }
     public int VoiceQueueCount { get; set; }
+    public DateTime? LastProcessedAt { get; set; }
+    public DateTime? NextScheduledAt { get; set; }
     public DateTime LastUpdated { get; set; }
 }
 

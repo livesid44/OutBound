@@ -27,6 +27,17 @@ public class CampaignApiConfig
     [MaxLength(100)]
     public string? SendGridTemplateId { get; set; }
 
+    /// <summary>
+    /// Custom HTML email template content
+    /// </summary>
+    public string? EmailTemplateHtml { get; set; }
+
+    /// <summary>
+    /// Email subject line with dynamic field placeholders
+    /// </summary>
+    [MaxLength(500)]
+    public string? EmailSubject { get; set; }
+
     // WebEx/Voice configuration
     [MaxLength(2000)]
     public string? WebExCurl { get; set; }

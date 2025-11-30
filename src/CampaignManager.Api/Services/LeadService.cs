@@ -202,11 +202,14 @@ public class LeadService : ILeadService
             CampaignName = campaign.Name,
             TotalLeads = leads.Count,
             QueuedCount = leads.Count(l => l.Status == LeadStatus.Queued),
+            InProgressCount = leads.Count(l => l.Status == LeadStatus.EmailPending || l.Status == LeadStatus.CallPending || l.Status == LeadStatus.Dialed || l.Status == LeadStatus.Connected),
             EmailPendingCount = leads.Count(l => l.Status == LeadStatus.EmailPending),
             EmailSentCount = leads.Count(l => l.Status == LeadStatus.EmailSent),
+            EmailFailedCount = leads.Count(l => l.Status == LeadStatus.Failed && l.EmailAttempts > 0 && l.CallAttempts == 0),
             CallPendingCount = leads.Count(l => l.Status == LeadStatus.CallPending),
-            DialedCount = leads.Count(l => l.Status == LeadStatus.Dialed),
-            ConnectedCount = leads.Count(l => l.Status == LeadStatus.Connected),
+            DialedCount = leads.Count(l => l.Status == LeadStatus.Dialed || l.CallAttempts > 0),
+            ConnectedCount = leads.Count(l => l.Status == LeadStatus.Connected || l.Status == LeadStatus.RightPartyContact),
+            NoAnswerCount = leads.Count(l => l.Status == LeadStatus.NoAnswer),
             RightPartyContactCount = leads.Count(l => l.Status == LeadStatus.RightPartyContact),
             DisposedCount = leads.Count(l => l.Status == LeadStatus.Disposed),
             FailedCount = leads.Count(l => l.Status == LeadStatus.Failed)
@@ -220,10 +223,15 @@ public class LeadService : ILeadService
             .Where(l => l.CampaignId == campaignId)
             .ToListAsync();
 
+        var campaign = await _unitOfWork.Repository<Campaign>().GetByIdAsync(campaignId);
+
         return new QueueStatusDto
         {
+            CampaignId = campaignId,
             EmailQueueCount = leads.Count(l => l.Status == LeadStatus.EmailPending),
             VoiceQueueCount = leads.Count(l => l.Status == LeadStatus.CallPending),
+            LastProcessedAt = leads.Max(l => l.UpdatedAt),
+            NextScheduledAt = campaign?.SchedulerEnabled == true ? DateTime.UtcNow.AddMinutes(5) : null,
             LastUpdated = DateTime.UtcNow
         };
     }

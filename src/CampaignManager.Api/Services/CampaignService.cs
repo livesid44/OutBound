@@ -95,12 +95,15 @@ public class CampaignService : ICampaignService
             }
         }
 
+        // Ensure at least one channel is selected, default to Email
+        var channels = request.Channels != ChannelType.None ? request.Channels : ChannelType.Email;
+
         var campaign = new Campaign
         {
             ProjectId = projectId,
             Name = request.Name,
             Description = request.Description,
-            Channel = request.Channel,
+            Channels = channels,
             Status = CampaignStatus.Draft,
             CreatedById = userId,
             CreatedAt = DateTime.UtcNow
@@ -143,7 +146,7 @@ public class CampaignService : ICampaignService
 
         if (request.Name != null) campaign.Name = request.Name;
         if (request.Description != null) campaign.Description = request.Description;
-        if (request.Channel.HasValue) campaign.Channel = request.Channel.Value;
+        if (request.Channels.HasValue) campaign.Channels = request.Channels.Value;
         if (request.Status.HasValue) campaign.Status = request.Status.Value;
         if (request.SchedulerEnabled.HasValue) campaign.SchedulerEnabled = request.SchedulerEnabled.Value;
 
@@ -248,6 +251,8 @@ public class CampaignService : ICampaignService
         if (request.SendGridFromEmail != null) config.SendGridFromEmail = request.SendGridFromEmail;
         if (request.SendGridFromName != null) config.SendGridFromName = request.SendGridFromName;
         if (request.SendGridTemplateId != null) config.SendGridTemplateId = request.SendGridTemplateId;
+        if (request.EmailTemplateHtml != null) config.EmailTemplateHtml = request.EmailTemplateHtml;
+        if (request.EmailSubject != null) config.EmailSubject = request.EmailSubject;
         if (request.WebExCurl != null) config.WebExCurl = request.WebExCurl;
         if (request.WebExApiEndpoint != null) config.WebExApiEndpoint = request.WebExApiEndpoint;
         if (request.WebExAuthToken != null) config.WebExAuthToken = request.WebExAuthToken;
@@ -325,7 +330,7 @@ public class CampaignService : ICampaignService
             ProjectId = campaign.ProjectId,
             Name = campaign.Name,
             Description = campaign.Description,
-            Channel = campaign.Channel,
+            Channels = campaign.Channels,
             Status = campaign.Status,
             SchedulerEnabled = campaign.SchedulerEnabled,
             CreatedAt = campaign.CreatedAt,
@@ -359,6 +364,8 @@ public class CampaignService : ICampaignService
             SendGridFromEmail = config.SendGridFromEmail,
             SendGridFromName = config.SendGridFromName,
             SendGridTemplateId = config.SendGridTemplateId,
+            EmailTemplateHtml = config.EmailTemplateHtml,
+            EmailSubject = config.EmailSubject,
             WebExCurl = config.WebExCurl,
             WebExApiEndpoint = config.WebExApiEndpoint,
             WebExAuthToken = config.WebExAuthToken,
