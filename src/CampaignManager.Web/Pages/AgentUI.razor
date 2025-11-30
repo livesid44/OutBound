@@ -167,13 +167,27 @@ else
         isLoading = true;
         try
         {
-            // In a real scenario, this would fetch leads assigned to the agent
-            var result = await ApiService.GetAsync<PagedResult<LeadDto>>("campaigns/{campaignId}/leads");
-            if (result?.Items != null && result.Items.Any())
+            // Fetch leads assigned to the current agent
+            // In production, this would use the agent's assigned campaign ID
+            var user = await ApiService.GetAsync<UserDto>("users/me");
+            if (user?.ProjectId != null)
             {
-                leads = result.Items;
-                totalLeads = result.TotalCount;
-                currentLead = leads[currentIndex];
+                // Get active campaigns for the project and fetch leads
+                var campaigns = await ApiService.GetAsync<PagedResult<CampaignDto>>("campaigns");
+                if (campaigns?.Items?.Any() == true)
+                {
+                    var activeCampaign = campaigns.Items.FirstOrDefault(c => c.Status == CampaignStatus.Active);
+                    if (activeCampaign != null)
+                    {
+                        var result = await ApiService.GetAsync<PagedResult<LeadDto>>($"campaigns/{activeCampaign.Id}/leads?status=CallPending");
+                        if (result?.Items != null && result.Items.Any())
+                        {
+                            leads = result.Items;
+                            totalLeads = result.TotalCount;
+                            currentLead = leads[currentIndex];
+                        }
+                    }
+                }
             }
         }
         catch { }
@@ -187,15 +201,17 @@ else
     {
         if (currentLead != null)
         {
-            // Launch WebEx with agent ID and lead ID
-            var webExUrl = $"https://webex.example.com/call?leadId={currentLead.Id}";
-            Navigation.NavigateTo(webExUrl, true);
+            // WebEx URL should be configured in campaign settings
+            // This is a placeholder - actual integration would use the campaign's WebEx API configuration
+            var webExUrl = $"/campaigns/{currentLead.CampaignId}?leadId={currentLead.Id}";
+            // TODO: Implement actual WebEx CTI integration using campaign's API config
+            // For now, show a notification that WebEx integration is pending configuration
         }
     }
 
     private void EndCall()
     {
-        // Handle end call logic
+        // Handle end call logic - would integrate with WebEx API
     }
 
     private async Task SaveDisposition()

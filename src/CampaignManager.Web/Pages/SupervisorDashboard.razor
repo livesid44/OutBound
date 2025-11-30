@@ -182,8 +182,9 @@ else
                 ReceiverId = selectedAgentId.Value,
                 Message = newMessage
             };
-            // await ApiService.PostAsync("chat/send", request);
             
+            // Add message to local list for immediate display
+            // Note: In production, this would be sent via SignalR for real-time communication
             chatMessages.Add(new ChatMessageDto
             {
                 SenderName = "You",
@@ -191,6 +192,9 @@ else
                 Message = newMessage,
                 SentAt = DateTime.Now
             });
+            
+            // Send to API (endpoint to be implemented with SignalR for real-time chat)
+            await ApiService.PostAsync<ApiResponse<ChatMessageDto>>("chat/send", request);
             
             newMessage = "";
         }
