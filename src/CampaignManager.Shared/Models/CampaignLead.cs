@@ -23,6 +23,35 @@ public enum LeadStatus
 }
 
 /// <summary>
+/// Email-specific lead status
+/// </summary>
+public enum LeadEmailStatus
+{
+    Pending = 0,
+    Sent = 1,
+    Failed = 2,
+    Bounced = 3,
+    Opened = 4,
+    Clicked = 5
+}
+
+/// <summary>
+/// Call-specific lead status
+/// </summary>
+public enum LeadCallStatus
+{
+    Pending = 0,
+    Dialed = 1,
+    Connected = 2,
+    RightPartyContact = 3,
+    NoAnswer = 4,
+    Busy = 5,
+    Voicemail = 6,
+    Failed = 7,
+    Disposed = 8
+}
+
+/// <summary>
 /// Represents a lead/contact in a campaign
 /// </summary>
 public class CampaignLead
@@ -34,17 +63,21 @@ public class CampaignLead
     public Guid CampaignId { get; set; }
 
     // Custom field data stored as JSON
-    public string? FieldData { get; set; }
+    public string? Data { get; set; }
 
     public LeadStatus Status { get; set; } = LeadStatus.Queued;
 
+    // Email tracking
+    public LeadEmailStatus EmailStatus { get; set; } = LeadEmailStatus.Pending;
     public int EmailAttempts { get; set; } = 0;
+    public DateTime? LastEmailAttemptAt { get; set; }
+    public DateTime? EmailSentAt { get; set; }
 
+    // Call tracking
+    public LeadCallStatus CallStatus { get; set; } = LeadCallStatus.Pending;
     public int CallAttempts { get; set; } = 0;
-
-    public DateTime? LastEmailAttempt { get; set; }
-
-    public DateTime? LastCallAttempt { get; set; }
+    public DateTime? LastCallAttemptAt { get; set; }
+    public DateTime? CallConnectedAt { get; set; }
 
     public DateTime? NextScheduledAction { get; set; }
 

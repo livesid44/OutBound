@@ -45,12 +45,12 @@ else if (campaigns?.Items != null)
                             <span class="badge @(campaign.Status == CampaignStatus.Active ? "bg-success" : "bg-secondary") me-2">
                                 @campaign.Status
                             </span>
-                            <span class="badge @(campaign.SchedulerEnabled ? "bg-primary" : "bg-secondary") me-2">
-                                @(campaign.SchedulerEnabled ? "Scheduler On" : "Scheduler Off")
+                            <span class="badge @(campaign.IsSchedulerEnabled ? "bg-primary" : "bg-secondary") me-2">
+                                @(campaign.IsSchedulerEnabled ? "Scheduler On" : "Scheduler Off")
                             </span>
-                            <button class="btn btn-sm @(campaign.SchedulerEnabled ? "btn-danger" : "btn-success")" 
-                                    @onclick="() => ToggleScheduler(campaign.Id, !campaign.SchedulerEnabled)">
-                                @(campaign.SchedulerEnabled ? "Stop" : "Start")
+                            <button class="btn btn-sm @(campaign.IsSchedulerEnabled ? "btn-danger" : "btn-success")" 
+                                    @onclick="() => ToggleScheduler(campaign.Id, !campaign.IsSchedulerEnabled)">
+                                @(campaign.IsSchedulerEnabled ? "Stop" : "Start")
                             </button>
                         </div>
                     </div>

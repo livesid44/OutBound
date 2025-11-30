@@ -25,10 +25,10 @@ else if (currentLead != null)
                     <h5 class="mb-0">Customer Information</h5>
                 </div>
                 <div class="card-body">
-                    @if (currentLead.ParsedFieldData != null)
+                    @if (currentLead.ParsedData != null)
                     {
                         <dl class="row">
-                            @foreach (var field in currentLead.ParsedFieldData)
+                            @foreach (var field in currentLead.ParsedData)
                             {
                                 <dt class="col-sm-4">@field.Key</dt>
                                 <dd class="col-sm-8">@(field.Value?.ToString() ?? "-")</dd>

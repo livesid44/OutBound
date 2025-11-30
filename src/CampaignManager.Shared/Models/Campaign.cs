@@ -64,7 +64,20 @@ public class Campaign
 
     public CampaignStatus Status { get; set; } = CampaignStatus.Draft;
 
-    public bool SchedulerEnabled { get; set; } = false;
+    /// <summary>
+    /// Whether the scheduler is enabled for this campaign
+    /// </summary>
+    public bool IsSchedulerEnabled { get; set; } = false;
+
+    /// <summary>
+    /// Last time the scheduler processed this campaign
+    /// </summary>
+    public DateTime? LastProcessedAt { get; set; }
+
+    /// <summary>
+    /// Next scheduled processing time
+    /// </summary>
+    public DateTime? NextScheduledAt { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

@@ -54,6 +54,13 @@ builder.Services.AddScoped<ICampaignService, CampaignService>();
 builder.Services.AddScoped<ILeadService, LeadService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 
+// HTTP Client Factory for Voice API calls
+builder.Services.AddHttpClient();
+
+// Background Scheduler Services for Email and Voice
+builder.Services.AddHostedService<EmailSchedulerService>();
+builder.Services.AddHostedService<VoiceSchedulerService>();
+
 // Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

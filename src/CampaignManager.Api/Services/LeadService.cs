@@ -73,8 +73,10 @@ public class LeadService : ILeadService
         var lead = new CampaignLead
         {
             CampaignId = campaignId,
-            FieldData = JsonSerializer.Serialize(request.FieldData),
+            Data = JsonSerializer.Serialize(request.Data),
             Status = LeadStatus.Queued,
+            EmailStatus = LeadEmailStatus.Pending,
+            CallStatus = LeadCallStatus.Pending,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -100,8 +102,10 @@ public class LeadService : ILeadService
                 var lead = new CampaignLead
                 {
                     CampaignId = campaignId,
-                    FieldData = JsonSerializer.Serialize(leadData),
+                    Data = JsonSerializer.Serialize(leadData),
                     Status = LeadStatus.Queued,
+                    EmailStatus = LeadEmailStatus.Pending,
+                    CallStatus = LeadCallStatus.Pending,
                     CreatedAt = DateTime.UtcNow
                 };
 
@@ -175,6 +179,7 @@ public class LeadService : ILeadService
         }
 
         lead.Status = LeadStatus.Disposed;
+        lead.CallStatus = LeadCallStatus.Disposed;
         lead.UpdatedAt = DateTime.UtcNow;
 
         await _unitOfWork.SaveChangesAsync();
@@ -203,14 +208,14 @@ public class LeadService : ILeadService
             TotalLeads = leads.Count,
             QueuedCount = leads.Count(l => l.Status == LeadStatus.Queued),
             InProgressCount = leads.Count(l => l.Status == LeadStatus.EmailPending || l.Status == LeadStatus.CallPending || l.Status == LeadStatus.Dialed || l.Status == LeadStatus.Connected),
-            EmailPendingCount = leads.Count(l => l.Status == LeadStatus.EmailPending),
-            EmailSentCount = leads.Count(l => l.Status == LeadStatus.EmailSent),
-            EmailFailedCount = leads.Count(l => l.Status == LeadStatus.Failed && l.EmailAttempts > 0 && l.CallAttempts == 0),
-            CallPendingCount = leads.Count(l => l.Status == LeadStatus.CallPending),
-            DialedCount = leads.Count(l => l.Status == LeadStatus.Dialed || l.CallAttempts > 0),
-            ConnectedCount = leads.Count(l => l.Status == LeadStatus.Connected || l.Status == LeadStatus.RightPartyContact),
-            NoAnswerCount = leads.Count(l => l.Status == LeadStatus.NoAnswer),
-            RightPartyContactCount = leads.Count(l => l.Status == LeadStatus.RightPartyContact),
+            EmailPendingCount = leads.Count(l => l.EmailStatus == LeadEmailStatus.Pending),
+            EmailSentCount = leads.Count(l => l.EmailStatus == LeadEmailStatus.Sent),
+            EmailFailedCount = leads.Count(l => l.EmailStatus == LeadEmailStatus.Failed),
+            CallPendingCount = leads.Count(l => l.CallStatus == LeadCallStatus.Pending),
+            DialedCount = leads.Count(l => l.CallStatus == LeadCallStatus.Dialed || l.CallAttempts > 0),
+            ConnectedCount = leads.Count(l => l.CallStatus == LeadCallStatus.Connected || l.CallStatus == LeadCallStatus.RightPartyContact),
+            NoAnswerCount = leads.Count(l => l.CallStatus == LeadCallStatus.NoAnswer),
+            RightPartyContactCount = leads.Count(l => l.CallStatus == LeadCallStatus.RightPartyContact),
             DisposedCount = leads.Count(l => l.Status == LeadStatus.Disposed),
             FailedCount = leads.Count(l => l.Status == LeadStatus.Failed)
         };
@@ -228,10 +233,10 @@ public class LeadService : ILeadService
         return new QueueStatusDto
         {
             CampaignId = campaignId,
-            EmailQueueCount = leads.Count(l => l.Status == LeadStatus.EmailPending),
-            VoiceQueueCount = leads.Count(l => l.Status == LeadStatus.CallPending),
-            LastProcessedAt = leads.Any() ? leads.Max(l => l.UpdatedAt) : null,
-            NextScheduledAt = campaign?.SchedulerEnabled == true ? DateTime.UtcNow.AddMinutes(5) : null,
+            EmailQueueCount = leads.Count(l => l.EmailStatus == LeadEmailStatus.Pending),
+            VoiceQueueCount = leads.Count(l => l.CallStatus == LeadCallStatus.Pending),
+            LastProcessedAt = campaign?.LastProcessedAt,
+            NextScheduledAt = campaign?.IsSchedulerEnabled == true ? DateTime.UtcNow.AddSeconds(30) : null,
             LastUpdated = DateTime.UtcNow
         };
     }
@@ -239,11 +244,11 @@ public class LeadService : ILeadService
     private static LeadDto MapToDto(CampaignLead lead)
     {
         Dictionary<string, object?>? parsedData = null;
-        if (!string.IsNullOrEmpty(lead.FieldData))
+        if (!string.IsNullOrEmpty(lead.Data))
         {
             try
             {
-                parsedData = JsonSerializer.Deserialize<Dictionary<string, object?>>(lead.FieldData);
+                parsedData = JsonSerializer.Deserialize<Dictionary<string, object?>>(lead.Data);
             }
             catch
             {
@@ -255,13 +260,17 @@ public class LeadService : ILeadService
         {
             Id = lead.Id,
             CampaignId = lead.CampaignId,
-            FieldData = lead.FieldData,
-            ParsedFieldData = parsedData,
+            Data = lead.Data,
+            ParsedData = parsedData,
             Status = lead.Status,
+            EmailStatus = lead.EmailStatus,
             EmailAttempts = lead.EmailAttempts,
+            LastEmailAttemptAt = lead.LastEmailAttemptAt,
+            EmailSentAt = lead.EmailSentAt,
+            CallStatus = lead.CallStatus,
             CallAttempts = lead.CallAttempts,
-            LastEmailAttempt = lead.LastEmailAttempt,
-            LastCallAttempt = lead.LastCallAttempt,
+            LastCallAttemptAt = lead.LastCallAttemptAt,
+            CallConnectedAt = lead.CallConnectedAt,
             NextScheduledAction = lead.NextScheduledAction,
             AssignedAgentId = lead.AssignedAgentId,
             AssignedAgentName = lead.AssignedAgent != null ? $"{lead.AssignedAgent.FirstName} {lead.AssignedAgent.LastName}" : null,

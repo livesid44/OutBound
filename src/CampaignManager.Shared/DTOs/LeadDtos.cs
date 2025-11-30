@@ -6,13 +6,22 @@ public class LeadDto
 {
     public Guid Id { get; set; }
     public Guid CampaignId { get; set; }
-    public string? FieldData { get; set; }
-    public Dictionary<string, object?>? ParsedFieldData { get; set; }
+    public string? Data { get; set; }
+    public Dictionary<string, object?>? ParsedData { get; set; }
     public LeadStatus Status { get; set; }
+    
+    // Email tracking
+    public LeadEmailStatus EmailStatus { get; set; }
     public int EmailAttempts { get; set; }
+    public DateTime? LastEmailAttemptAt { get; set; }
+    public DateTime? EmailSentAt { get; set; }
+    
+    // Call tracking
+    public LeadCallStatus CallStatus { get; set; }
     public int CallAttempts { get; set; }
-    public DateTime? LastEmailAttempt { get; set; }
-    public DateTime? LastCallAttempt { get; set; }
+    public DateTime? LastCallAttemptAt { get; set; }
+    public DateTime? CallConnectedAt { get; set; }
+    
     public DateTime? NextScheduledAction { get; set; }
     public Guid? AssignedAgentId { get; set; }
     public string? AssignedAgentName { get; set; }
@@ -22,7 +31,7 @@ public class LeadDto
 
 public class CreateLeadRequest
 {
-    public Dictionary<string, object?> FieldData { get; set; } = new();
+    public Dictionary<string, object?> Data { get; set; } = new();
 }
 
 public class BulkLeadUploadRequest

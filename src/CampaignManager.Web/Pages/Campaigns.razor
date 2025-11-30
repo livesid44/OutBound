@@ -50,8 +50,8 @@ else
                             </td>
                             <td>@campaign.LeadCount</td>
                             <td>
-                                <span class="badge @(campaign.SchedulerEnabled ? "bg-success" : "bg-secondary")">
-                                    @(campaign.SchedulerEnabled ? "On" : "Off")
+                                <span class="badge @(campaign.IsSchedulerEnabled ? "bg-success" : "bg-secondary")">
+                                    @(campaign.IsSchedulerEnabled ? "On" : "Off")
                                 </span>
                             </td>
                             <td>@campaign.CreatedAt.ToString("yyyy-MM-dd")</td>

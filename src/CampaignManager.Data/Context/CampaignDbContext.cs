@@ -306,7 +306,7 @@ public class CampaignDbContext : DbContext
             Description = "A sample email campaign for demonstration",
             Channel = ChannelType.Email,
             Status = CampaignStatus.Draft,
-            SchedulerEnabled = false,
+            IsSchedulerEnabled = false,
             CreatedById = subAdminId,
             CreatedAt = seedDate
         });

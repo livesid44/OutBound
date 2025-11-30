@@ -148,7 +148,7 @@ public class CampaignService : ICampaignService
         if (request.Description != null) campaign.Description = request.Description;
         if (request.Channels.HasValue) campaign.Channels = request.Channels.Value;
         if (request.Status.HasValue) campaign.Status = request.Status.Value;
-        if (request.SchedulerEnabled.HasValue) campaign.SchedulerEnabled = request.SchedulerEnabled.Value;
+        if (request.IsSchedulerEnabled.HasValue) campaign.IsSchedulerEnabled = request.IsSchedulerEnabled.Value;
 
         campaign.UpdatedAt = DateTime.UtcNow;
 
@@ -313,7 +313,7 @@ public class CampaignService : ICampaignService
             return ApiResponse<bool>.ErrorResponse("Campaign not found");
         }
 
-        campaign.SchedulerEnabled = enable;
+        campaign.IsSchedulerEnabled = enable;
         campaign.UpdatedAt = DateTime.UtcNow;
 
         _unitOfWork.Repository<Campaign>().Update(campaign);
@@ -332,7 +332,9 @@ public class CampaignService : ICampaignService
             Description = campaign.Description,
             Channels = campaign.Channels,
             Status = campaign.Status,
-            SchedulerEnabled = campaign.SchedulerEnabled,
+            IsSchedulerEnabled = campaign.IsSchedulerEnabled,
+            LastProcessedAt = campaign.LastProcessedAt,
+            NextScheduledAt = campaign.NextScheduledAt,
             CreatedAt = campaign.CreatedAt,
             CreatedByName = campaign.CreatedBy != null ? $"{campaign.CreatedBy.FirstName} {campaign.CreatedBy.LastName}" : null,
             LeadCount = campaign.Leads?.Count ?? 0,

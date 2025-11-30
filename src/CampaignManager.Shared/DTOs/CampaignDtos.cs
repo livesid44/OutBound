@@ -17,7 +17,9 @@ public class CampaignDto
     /// </summary>
     public ChannelType Channel { get => Channels; set => Channels = value; }
     public CampaignStatus Status { get; set; }
-    public bool SchedulerEnabled { get; set; }
+    public bool IsSchedulerEnabled { get; set; }
+    public DateTime? LastProcessedAt { get; set; }
+    public DateTime? NextScheduledAt { get; set; }
     public DateTime CreatedAt { get; set; }
     public string? CreatedByName { get; set; }
     public int LeadCount { get; set; }
@@ -47,7 +49,7 @@ public class UpdateCampaignRequest
     public ChannelType? Channels { get; set; }
     public ChannelType? Channel { get => Channels; set => Channels = value; }
     public CampaignStatus? Status { get; set; }
-    public bool? SchedulerEnabled { get; set; }
+    public bool? IsSchedulerEnabled { get; set; }
 }
 
 public class CampaignFieldDto
