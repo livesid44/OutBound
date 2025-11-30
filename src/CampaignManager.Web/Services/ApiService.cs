@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Blazored.LocalStorage;
 using CampaignManager.Shared.DTOs;
 
@@ -11,6 +12,8 @@ public interface IApiService
     Task<T?> PostAsync<T>(string endpoint, object? data = null);
     Task<T?> PutAsync<T>(string endpoint, object? data = null);
     Task<bool> DeleteAsync(string endpoint);
+    Task<(T? Result, string? ErrorMessage)> PostWithErrorAsync<T>(string endpoint, object? data = null);
+    Task<(T? Result, string? ErrorMessage)> PutWithErrorAsync<T>(string endpoint, object? data = null);
 }
 
 public class ApiService : IApiService
@@ -47,7 +50,16 @@ public class ApiService : IApiService
         await SetHeadersAsync();
         try
         {
-            return await _httpClient.GetFromJsonAsync<T>($"api/{endpoint}");
+            var response = await _httpClient.GetAsync($"api/{endpoint}");
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                if (!string.IsNullOrEmpty(content) && content.TrimStart().StartsWith("{") || content.TrimStart().StartsWith("["))
+                {
+                    return JsonSerializer.Deserialize<T>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                }
+            }
+            return default;
         }
         catch (Exception)
         {
@@ -63,13 +75,55 @@ public class ApiService : IApiService
             var response = await _httpClient.PostAsJsonAsync($"api/{endpoint}", data);
             if (response.IsSuccessStatusCode)
             {
-                return await response.Content.ReadFromJsonAsync<T>();
+                var content = await response.Content.ReadAsStringAsync();
+                if (!string.IsNullOrEmpty(content) && (content.TrimStart().StartsWith("{") || content.TrimStart().StartsWith("[")))
+                {
+                    return JsonSerializer.Deserialize<T>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                }
             }
             return default;
         }
         catch (Exception)
         {
             return default;
+        }
+    }
+
+    public async Task<(T? Result, string? ErrorMessage)> PostWithErrorAsync<T>(string endpoint, object? data = null)
+    {
+        await SetHeadersAsync();
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync($"api/{endpoint}", data);
+            var content = await response.Content.ReadAsStringAsync();
+            
+            if (response.IsSuccessStatusCode)
+            {
+                if (!string.IsNullOrEmpty(content) && (content.TrimStart().StartsWith("{") || content.TrimStart().StartsWith("[")))
+                {
+                    var result = JsonSerializer.Deserialize<T>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    return (result, null);
+                }
+                return (default, null);
+            }
+            else
+            {
+                // Try to parse error message from response
+                try
+                {
+                    if (!string.IsNullOrEmpty(content) && content.TrimStart().StartsWith("{"))
+                    {
+                        var errorResponse = JsonSerializer.Deserialize<ApiResponse<object>>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                        return (default, errorResponse?.Message ?? $"Error: {response.StatusCode}");
+                    }
+                }
+                catch { }
+                return (default, $"Error: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            return (default, ex.Message);
         }
     }
 
@@ -81,13 +135,55 @@ public class ApiService : IApiService
             var response = await _httpClient.PutAsJsonAsync($"api/{endpoint}", data);
             if (response.IsSuccessStatusCode)
             {
-                return await response.Content.ReadFromJsonAsync<T>();
+                var content = await response.Content.ReadAsStringAsync();
+                if (!string.IsNullOrEmpty(content) && (content.TrimStart().StartsWith("{") || content.TrimStart().StartsWith("[")))
+                {
+                    return JsonSerializer.Deserialize<T>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                }
             }
             return default;
         }
         catch (Exception)
         {
             return default;
+        }
+    }
+
+    public async Task<(T? Result, string? ErrorMessage)> PutWithErrorAsync<T>(string endpoint, object? data = null)
+    {
+        await SetHeadersAsync();
+        try
+        {
+            var response = await _httpClient.PutAsJsonAsync($"api/{endpoint}", data);
+            var content = await response.Content.ReadAsStringAsync();
+            
+            if (response.IsSuccessStatusCode)
+            {
+                if (!string.IsNullOrEmpty(content) && (content.TrimStart().StartsWith("{") || content.TrimStart().StartsWith("[")))
+                {
+                    var result = JsonSerializer.Deserialize<T>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                    return (result, null);
+                }
+                return (default, null);
+            }
+            else
+            {
+                // Try to parse error message from response
+                try
+                {
+                    if (!string.IsNullOrEmpty(content) && content.TrimStart().StartsWith("{"))
+                    {
+                        var errorResponse = JsonSerializer.Deserialize<ApiResponse<object>>(content, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                        return (default, errorResponse?.Message ?? $"Error: {response.StatusCode}");
+                    }
+                }
+                catch { }
+                return (default, $"Error: {response.StatusCode}");
+            }
+        }
+        catch (Exception ex)
+        {
+            return (default, ex.Message);
         }
     }
 

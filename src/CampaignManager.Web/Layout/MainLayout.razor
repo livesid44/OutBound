@@ -105,13 +105,18 @@
     {
         try
         {
+            _projects = new List<ProjectDto>();
             var result = await ApiService.GetAsync<PagedResult<ProjectDto>>("projects?pageSize=100");
-            _projects = result?.Items;
+            if (result?.Items != null)
+            {
+                _projects = result.Items;
+            }
         }
         catch
         {
             _projects = new List<ProjectDto>();
         }
+        StateHasChanged();
     }
 
     private async Task OnProjectChanged(ChangeEventArgs e)

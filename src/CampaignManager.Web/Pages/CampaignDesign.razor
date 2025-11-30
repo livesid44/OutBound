@@ -11,6 +11,22 @@
     <button class="btn btn-outline-secondary" @onclick="GoBack">Back to Campaigns</button>
 </div>
 
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle me-2"></i>@successMessage
+        <button type="button" class="btn-close" @onclick="ClearMessages"></button>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-circle me-2"></i>@errorMessage
+        <button type="button" class="btn-close" @onclick="ClearMessages"></button>
+    </div>
+}
+
 @if (isLoading)
 {
     <div class="d-flex justify-content-center">
@@ -338,6 +354,8 @@ else if (campaign != null)
     private bool isLoading = true;
     private bool showFieldModal = false;
     private bool showHtmlEditor = true;
+    private string? successMessage;
+    private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -383,6 +401,29 @@ else if (campaign != null)
         {
             isLoading = false;
         }
+    }
+
+    private void ClearMessages()
+    {
+        successMessage = null;
+        errorMessage = null;
+    }
+
+    private async Task ShowSuccessMessage(string message)
+    {
+        ClearMessages();
+        successMessage = message;
+        StateHasChanged();
+        await Task.Delay(3000);
+        successMessage = null;
+        StateHasChanged();
+    }
+
+    private void ShowErrorMessage(string message)
+    {
+        ClearMessages();
+        errorMessage = message;
+        StateHasChanged();
     }
 
     private bool HasChannel(ChannelType channel)
@@ -447,35 +488,72 @@ else if (campaign != null)
 
     private async Task AddField()
     {
-        var result = await ApiService.PostAsync<ApiResponse<CampaignFieldDto>>($"campaigns/{CampaignId}/fields", newField);
+        var (result, error) = await ApiService.PostWithErrorAsync<ApiResponse<CampaignFieldDto>>($"campaigns/{CampaignId}/fields", newField);
         if (result?.Success == true)
         {
             showFieldModal = false;
             await LoadCampaign();
+            _ = ShowSuccessMessage("Field added successfully!");
+        }
+        else
+        {
+            ShowErrorMessage(error ?? "Failed to add field");
         }
     }
 
     private async Task DeleteField(Guid fieldId)
     {
-        await ApiService.DeleteAsync($"campaigns/fields/{fieldId}");
-        await LoadCampaign();
+        var success = await ApiService.DeleteAsync($"campaigns/fields/{fieldId}");
+        if (success)
+        {
+            await LoadCampaign();
+            _ = ShowSuccessMessage("Field deleted successfully!");
+        }
+        else
+        {
+            ShowErrorMessage("Failed to delete field");
+        }
     }
 
     private async Task SaveApiConfig()
     {
-        await ApiService.PutAsync<ApiResponse<CampaignApiConfigDto>>($"campaigns/{CampaignId}/api-config", apiConfig);
+        var (result, error) = await ApiService.PutWithErrorAsync<ApiResponse<CampaignApiConfigDto>>($"campaigns/{CampaignId}/api-config", apiConfig);
+        if (result?.Success == true)
+        {
+            _ = ShowSuccessMessage("API configuration saved successfully!");
+        }
+        else
+        {
+            ShowErrorMessage(error ?? "Failed to save API configuration");
+        }
     }
 
     private async Task SaveStrategy()
     {
-        await ApiService.PutAsync<ApiResponse<CampaignStrategyDto>>($"campaigns/{CampaignId}/strategy", strategy);
+        var (result, error) = await ApiService.PutWithErrorAsync<ApiResponse<CampaignStrategyDto>>($"campaigns/{CampaignId}/strategy", strategy);
+        if (result?.Success == true)
+        {
+            _ = ShowSuccessMessage("Strategy saved successfully!");
+        }
+        else
+        {
+            ShowErrorMessage(error ?? "Failed to save strategy");
+        }
     }
 
     private async Task ActivateCampaign()
     {
         var update = new UpdateCampaignRequest { Status = CampaignStatus.Active };
-        await ApiService.PutAsync<ApiResponse<CampaignDto>>($"campaigns/{CampaignId}", update);
-        await LoadCampaign();
+        var (result, error) = await ApiService.PutWithErrorAsync<ApiResponse<CampaignDto>>($"campaigns/{CampaignId}", update);
+        if (result?.Success == true)
+        {
+            await LoadCampaign();
+            _ = ShowSuccessMessage("Campaign activated successfully!");
+        }
+        else
+        {
+            ShowErrorMessage(error ?? "Failed to activate campaign");
+        }
     }
 
     private void GoToDataUpload()
