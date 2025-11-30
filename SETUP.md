@@ -125,6 +125,34 @@ Edit `src/CampaignManager.Api/appsettings.json`:
 | `JwtSettings:SecretKey` | Secret key for JWT tokens (min 32 characters) |
 | `JwtSettings:ExpiryInMinutes` | Token expiration time |
 
+### Connection String Examples
+
+Choose the appropriate connection string for your SQL Server setup:
+
+| SQL Server Type | Connection String |
+|-----------------|-------------------|
+| **LocalDB** (Visual Studio) | `Server=(localdb)\mssqllocaldb;Database=CampaignManagerDb;Trusted_Connection=True;MultipleActiveResultSets=true` |
+| **SQL Server Express** | `Server=.\SQLEXPRESS;Database=CampaignManagerDb;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True` |
+| **SQL Server (named instance)** | `Server=YOURSERVER\INSTANCENAME;Database=CampaignManagerDb;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True` |
+| **SQL Server (with credentials)** | `Server=YOURSERVER;Database=CampaignManagerDb;User Id=sa;Password=YourPassword;MultipleActiveResultSets=true;TrustServerCertificate=True` |
+| **Azure SQL** | `Server=yourserver.database.windows.net;Database=CampaignManagerDb;User Id=yourusername;Password=yourpassword;` |
+
+### Verifying Your Connection String
+
+When the API starts, it logs the connection string being used:
+
+```
+info: Program[0]
+      Using connection string: Server=(localdb)\mssqllocaldb;Database=CampaignManagerDb;Trusted_Connection=True;...
+      Configuration file path: C:\path\to\your\project\bin\Debug\net8.0\
+```
+
+**If the database is not being created:**
+1. Check the console output for the "Using connection string" log
+2. Verify the SQL Server instance exists and is running
+3. For LocalDB: Ensure Visual Studio is installed or install SQL Server Express LocalDB separately
+4. For SQL Server Express: Ensure the SQL Server Browser service is running
+
 ### Step 2: Blazor Web Configuration
 
 Edit `src/CampaignManager.Web/wwwroot/appsettings.json`:

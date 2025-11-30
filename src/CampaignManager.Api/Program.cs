@@ -109,6 +109,15 @@ using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<CampaignDbContext>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+    
+    // Log the connection string being used (mask password if present)
+    var connectionString = configuration.GetConnectionString("DefaultConnection");
+    var maskedConnectionString = connectionString?.Contains("Password=") == true 
+        ? System.Text.RegularExpressions.Regex.Replace(connectionString, @"Password=[^;]*", "Password=***")
+        : connectionString;
+    logger.LogInformation("Using connection string: {ConnectionString}", maskedConnectionString);
+    logger.LogInformation("Configuration file path: {Path}", AppContext.BaseDirectory);
     
     try
     {
@@ -118,11 +127,15 @@ using (var scope = app.Services.CreateScope())
         {
             logger.LogInformation("Database created successfully with seed data.");
         }
+        else
+        {
+            logger.LogInformation("Database already exists.");
+        }
         
         // Verify the schema by performing a simple query
         // This will throw an exception if columns are missing
         var testQuery = await dbContext.Users.Take(1).Select(u => new { u.Id, u.FirstName, u.LastName, u.Email }).ToListAsync();
-        logger.LogInformation("Database schema verified successfully.");
+        logger.LogInformation("Database schema verified successfully. Found {Count} users in database.", testQuery.Count);
     }
     catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Message.Contains("Invalid column name") || ex.Message.Contains("Invalid object name"))
     {
@@ -133,6 +146,11 @@ using (var scope = app.Services.CreateScope())
         await dbContext.Database.EnsureCreatedAsync();
         
         logger.LogInformation("Database recreated successfully with new schema and seed data.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Error initializing database: {Message}", ex.Message);
+        throw;
     }
 }
 
