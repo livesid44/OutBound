@@ -1,0 +1,252 @@
+@page "/agent"
+@attribute [Authorize(Roles = "Agent")]
+@inject IApiService ApiService
+@inject NavigationManager Navigation
+
+<PageTitle>Agent UI - Campaign Manager</PageTitle>
+
+<h1>Agent Workstation</h1>
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (currentLead != null)
+{
+    <div class="row">
+        <!-- Customer Information -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Customer Information</h5>
+                </div>
+                <div class="card-body">
+                    @if (currentLead.ParsedFieldData != null)
+                    {
+                        <dl class="row">
+                            @foreach (var field in currentLead.ParsedFieldData)
+                            {
+                                <dt class="col-sm-4">@field.Key</dt>
+                                <dd class="col-sm-8">@(field.Value?.ToString() ?? "-")</dd>
+                            }
+                        </dl>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No customer data available.</p>
+                    }
+                </div>
+            </div>
+
+            <!-- WebEx Integration -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">WebEx CTI</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Lead ID:</strong> @currentLead.Id</p>
+                    <p><strong>Status:</strong> @currentLead.Status</p>
+                    <button class="btn btn-success me-2" @onclick="LaunchWebEx">
+                        Launch WebEx
+                    </button>
+                    <button class="btn btn-warning" @onclick="EndCall">
+                        End Call
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Disposition Form -->
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Disposition</h5>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="@disposition" OnValidSubmit="SaveDisposition">
+                        <div class="mb-3">
+                            <label class="form-label">Disposition</label>
+                            <InputSelect class="form-select" @bind-Value="disposition.DispositionCode">
+                                <option value="">-- Select --</option>
+                                <option value="CONNECTED">Connected</option>
+                                <option value="NOT_AVAILABLE">Not Available</option>
+                                <option value="BUSY">Busy</option>
+                                <option value="NO_ANSWER">No Answer</option>
+                                <option value="WRONG_NUMBER">Wrong Number</option>
+                                <option value="CALLBACK">Callback Required</option>
+                                <option value="QUALIFIED">Qualified Lead</option>
+                                <option value="NOT_INTERESTED">Not Interested</option>
+                            </InputSelect>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Sub Disposition</label>
+                            <InputSelect class="form-select" @bind-Value="disposition.SubDispositionCode">
+                                <option value="">-- Select --</option>
+                                <option value="FOLLOW_UP">Follow Up</option>
+                                <option value="SEND_INFO">Send Information</option>
+                                <option value="SCHEDULE_MEETING">Schedule Meeting</option>
+                            </InputSelect>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Callback Date/Time</label>
+                            <InputDate class="form-control" @bind-Value="callbackDate" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Comments</label>
+                            <InputTextArea class="form-control" @bind-Value="disposition.Comments" rows="3" />
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Save Disposition</button>
+                    </EditForm>
+                </div>
+            </div>
+
+            <!-- Supervisor Chat -->
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Supervisor Chat</h5>
+                </div>
+                <div class="card-body">
+                    <div class="chat-messages mb-3" style="height: 150px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;">
+                        @foreach (var message in chatMessages)
+                        {
+                            <div class="mb-1">
+                                <small class="text-muted">@message.SenderName:</small>
+                                <span>@message.Message</span>
+                            </div>
+                        }
+                    </div>
+                    <div class="input-group">
+                        <input type="text" class="form-control" @bind="newChatMessage" placeholder="Type message..." />
+                        <button class="btn btn-outline-secondary" @onclick="SendChat">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between mt-4">
+        <button class="btn btn-outline-primary" @onclick="PreviousLead" disabled="@(currentIndex <= 0)">
+            Previous
+        </button>
+        <span class="align-self-center">Lead @(currentIndex + 1) of @totalLeads</span>
+        <button class="btn btn-primary" @onclick="NextLead">
+            Next Lead
+        </button>
+    </div>
+}
+else
+{
+    <div class="alert alert-info">
+        <h4>No leads assigned</h4>
+        <p>There are no leads currently assigned to you. Please wait for supervisor to assign leads.</p>
+    </div>
+}
+
+@code {
+    private LeadDto? currentLead;
+    private CreateDispositionRequest disposition = new();
+    private DateTime? callbackDate;
+    private List<ChatMessageDto> chatMessages = new();
+    private string newChatMessage = "";
+    private bool isLoading = true;
+    private int currentIndex = 0;
+    private int totalLeads = 0;
+    private List<LeadDto> leads = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLeads();
+    }
+
+    private async Task LoadLeads()
+    {
+        isLoading = true;
+        try
+        {
+            // In a real scenario, this would fetch leads assigned to the agent
+            var result = await ApiService.GetAsync<PagedResult<LeadDto>>("campaigns/{campaignId}/leads");
+            if (result?.Items != null && result.Items.Any())
+            {
+                leads = result.Items;
+                totalLeads = result.TotalCount;
+                currentLead = leads[currentIndex];
+            }
+        }
+        catch { }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void LaunchWebEx()
+    {
+        if (currentLead != null)
+        {
+            // Launch WebEx with agent ID and lead ID
+            var webExUrl = $"https://webex.example.com/call?leadId={currentLead.Id}";
+            Navigation.NavigateTo(webExUrl, true);
+        }
+    }
+
+    private void EndCall()
+    {
+        // Handle end call logic
+    }
+
+    private async Task SaveDisposition()
+    {
+        if (currentLead != null && !string.IsNullOrEmpty(disposition.DispositionCode))
+        {
+            if (callbackDate.HasValue)
+            {
+                disposition.CallbackDateTime = callbackDate;
+            }
+            
+            await ApiService.PostAsync<ApiResponse<LeadDto>>($"leads/{currentLead.Id}/dispose", disposition);
+            await NextLead();
+        }
+    }
+
+    private async Task NextLead()
+    {
+        if (currentIndex < leads.Count - 1)
+        {
+            currentIndex++;
+            currentLead = leads[currentIndex];
+            disposition = new CreateDispositionRequest();
+            callbackDate = null;
+        }
+        else
+        {
+            await LoadLeads();
+        }
+    }
+
+    private void PreviousLead()
+    {
+        if (currentIndex > 0)
+        {
+            currentIndex--;
+            currentLead = leads[currentIndex];
+        }
+    }
+
+    private void SendChat()
+    {
+        if (!string.IsNullOrWhiteSpace(newChatMessage))
+        {
+            chatMessages.Add(new ChatMessageDto
+            {
+                SenderName = "You",
+                Message = newChatMessage,
+                SentAt = DateTime.Now
+            });
+            newChatMessage = "";
+        }
+    }
+}

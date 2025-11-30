@@ -1,0 +1,226 @@
+@page "/users"
+@attribute [Authorize(Roles = "SuperAdmin,SubAdmin")]
+@inject IApiService ApiService
+
+<PageTitle>Users - Campaign Manager</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Users</h1>
+    <div>
+        <button class="btn btn-primary me-2" @onclick="ShowCreateModal">Add User</button>
+        <button class="btn btn-outline-primary" @onclick="ShowBulkModal">Bulk Upload</button>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Supervisor</th>
+                    <th>Status</th>
+                    <th>Last Login</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (users?.Items != null)
+                {
+                    @foreach (var user in users.Items)
+                    {
+                        <tr>
+                            <td>@user.FirstName @user.LastName</td>
+                            <td>@user.Email</td>
+                            <td>@user.Role</td>
+                            <td>@(user.SupervisorName ?? "-")</td>
+                            <td>
+                                <span class="badge @(user.IsActive ? "bg-success" : "bg-danger")">
+                                    @(user.IsActive ? "Active" : "Inactive")
+                                </span>
+                                @if (user.IsOnline)
+                                {
+                                    <span class="badge bg-info ms-1">Online</span>
+                                }
+                            </td>
+                            <td>@(user.LastLoginAt?.ToString("yyyy-MM-dd HH:mm") ?? "Never")</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditUser(user)">Edit</button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteUser(user.Id)">Delete</button>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (showCreateModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5)">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(isEditing ? "Edit User" : "Create User")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <EditForm Model="@newUser" OnValidSubmit="SaveUser">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">First Name</label>
+                            <InputText class="form-control" @bind-Value="newUser.FirstName" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Last Name</label>
+                            <InputText class="form-control" @bind-Value="newUser.LastName" />
+                        </div>
+                        @if (!isEditing)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <InputText class="form-control" @bind-Value="newUser.Email" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Password</label>
+                                <InputText class="form-control" @bind-Value="newUser.Password" type="password" />
+                            </div>
+                        }
+                        <div class="mb-3">
+                            <label class="form-label">Role</label>
+                            <InputSelect class="form-select" @bind-Value="newUser.Role">
+                                <option value="@UserRole.Agent">Agent</option>
+                                <option value="@UserRole.Supervisor">Supervisor</option>
+                                <option value="@UserRole.SubAdmin">Sub Admin</option>
+                            </InputSelect>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Supervisor</label>
+                            <select class="form-select" @bind="supervisorId">
+                                <option value="">-- None --</option>
+                                @foreach (var sup in supervisors)
+                                {
+                                    <option value="@sup.Id">@sup.FirstName @sup.LastName</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private PagedResult<UserDto>? users;
+    private List<UserDto> supervisors = new();
+    private bool isLoading = true;
+    private bool showCreateModal = false;
+    private bool isEditing = false;
+    private Guid? editingUserId;
+    private CreateUserRequest newUser = new();
+    private string supervisorId = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            users = await ApiService.GetAsync<PagedResult<UserDto>>("users");
+            supervisors = await ApiService.GetAsync<List<UserDto>>("users/supervisors") ?? new List<UserDto>();
+        }
+        catch { }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowCreateModal()
+    {
+        newUser = new CreateUserRequest();
+        supervisorId = "";
+        isEditing = false;
+        editingUserId = null;
+        showCreateModal = true;
+    }
+
+    private void ShowBulkModal()
+    {
+        // TODO: Implement bulk upload UI
+    }
+
+    private void EditUser(UserDto user)
+    {
+        newUser = new CreateUserRequest
+        {
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email,
+            Role = user.Role
+        };
+        supervisorId = user.SupervisorId?.ToString() ?? "";
+        isEditing = true;
+        editingUserId = user.Id;
+        showCreateModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showCreateModal = false;
+    }
+
+    private async Task SaveUser()
+    {
+        if (!string.IsNullOrEmpty(supervisorId) && Guid.TryParse(supervisorId, out var supId))
+        {
+            newUser.SupervisorId = supId;
+        }
+
+        if (isEditing && editingUserId.HasValue)
+        {
+            var update = new UpdateUserRequest
+            {
+                FirstName = newUser.FirstName,
+                LastName = newUser.LastName,
+                Role = newUser.Role,
+                SupervisorId = newUser.SupervisorId
+            };
+            await ApiService.PutAsync<ApiResponse<UserDto>>($"users/{editingUserId}", update);
+        }
+        else
+        {
+            await ApiService.PostAsync<ApiResponse<UserDto>>("users", newUser);
+        }
+
+        showCreateModal = false;
+        await LoadData();
+    }
+
+    private async Task DeleteUser(Guid id)
+    {
+        await ApiService.DeleteAsync($"users/{id}");
+        await LoadData();
+    }
+}

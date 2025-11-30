@@ -1,0 +1,180 @@
+@page "/campaigns/{CampaignId:guid}/upload"
+@attribute [Authorize(Roles = "SuperAdmin,SubAdmin,Supervisor")]
+@inject IApiService ApiService
+@inject NavigationManager Navigation
+
+<PageTitle>Upload Data - Campaign Manager</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Upload Campaign Data</h1>
+    <button class="btn btn-outline-secondary" @onclick="GoBack">Back to Campaign</button>
+</div>
+
+@if (campaign != null)
+{
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Campaign: @campaign.Name</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Channel:</strong> @campaign.Channel</p>
+                    <p><strong>Fields:</strong></p>
+                    @if (campaign.Fields.Any())
+                    {
+                        <ul>
+                            @foreach (var field in campaign.Fields)
+                            {
+                                <li>@field.DisplayName (@field.FieldName) - @field.FieldType @(field.IsRequired ? "*" : "")</li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No fields defined. Please define fields in campaign design.</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Option 1: Upload Excel/CSV</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Select File</label>
+                        <InputFile class="form-control" OnChange="HandleFileUpload" accept=".xlsx,.csv" />
+                    </div>
+                    <p class="text-muted">Upload an Excel or CSV file with columns matching the campaign fields.</p>
+                    <button class="btn btn-primary" disabled="@(!fileSelected)" @onclick="ProcessUpload">
+                        @if (isUploading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Upload Data
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Option 2: API Push</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Endpoint:</strong></p>
+                    <code class="d-block mb-2">POST /api/campaigns/@CampaignId/leads</code>
+                    <p><strong>Request Body (single lead):</strong></p>
+                    <pre class="bg-light p-2"><code>{
+  "fieldData": {
+    @foreach (var field in campaign.Fields)
+    {
+        @($"\"{field.FieldName}\": \"value\",")<br />
+    }
+  }
+}</code></pre>
+                    <p><strong>Bulk Upload:</strong></p>
+                    <code class="d-block">POST /api/campaigns/@CampaignId/leads/bulk</code>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(uploadMessage))
+    {
+        <div class="alert @(uploadSuccess ? "alert-success" : "alert-danger") mt-3">
+            @uploadMessage
+        </div>
+    }
+}
+else
+{
+    <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public Guid CampaignId { get; set; }
+
+    private CampaignDto? campaign;
+    private bool fileSelected = false;
+    private bool isUploading = false;
+    private string? uploadMessage;
+    private bool uploadSuccess = false;
+    private IBrowserFile? selectedFile;
+
+    protected override async Task OnInitializedAsync()
+    {
+        campaign = await ApiService.GetAsync<CampaignDto>($"campaigns/{CampaignId}");
+    }
+
+    private void HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        selectedFile = e.File;
+        fileSelected = selectedFile != null;
+    }
+
+    private async Task ProcessUpload()
+    {
+        if (selectedFile == null) return;
+
+        isUploading = true;
+        uploadMessage = null;
+
+        try
+        {
+            // In a real implementation, you would parse the Excel/CSV file
+            // and send the data to the API
+            
+            // Simulating a bulk upload
+            var sampleLeads = new List<Dictionary<string, object?>>();
+            for (int i = 0; i < 5; i++)
+            {
+                var lead = new Dictionary<string, object?>();
+                foreach (var field in campaign!.Fields)
+                {
+                    lead[field.FieldName] = $"Sample Value {i + 1}";
+                }
+                sampleLeads.Add(lead);
+            }
+
+            var request = new BulkLeadUploadRequest { Leads = sampleLeads };
+            var result = await ApiService.PostAsync<BulkLeadUploadResult>($"campaigns/{CampaignId}/leads/bulk", request);
+
+            if (result != null)
+            {
+                uploadSuccess = true;
+                uploadMessage = $"Successfully uploaded {result.SuccessCount} of {result.TotalCount} leads.";
+                if (result.Errors.Any())
+                {
+                    uploadMessage += $" Errors: {string.Join(", ", result.Errors)}";
+                }
+            }
+            else
+            {
+                uploadSuccess = false;
+                uploadMessage = "Upload failed. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            uploadSuccess = false;
+            uploadMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isUploading = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo($"/campaigns/{CampaignId}/design");
+    }
+}

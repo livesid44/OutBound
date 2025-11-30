@@ -1,0 +1,197 @@
+@page "/campaigns"
+@attribute [Authorize(Roles = "SuperAdmin,SubAdmin,Supervisor")]
+@inject IApiService ApiService
+@inject NavigationManager Navigation
+
+<PageTitle>Campaigns - Campaign Manager</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Campaigns</h1>
+    <button class="btn btn-primary" @onclick="ShowCreateModal">
+        <span class="bi bi-plus"></span> New Campaign
+    </button>
+</div>
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Channel</th>
+                    <th>Status</th>
+                    <th>Leads</th>
+                    <th>Scheduler</th>
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (campaigns?.Items != null)
+                {
+                    @foreach (var campaign in campaigns.Items)
+                    {
+                        <tr>
+                            <td>@campaign.Name</td>
+                            <td>@campaign.Channel</td>
+                            <td>
+                                <span class="badge @GetStatusBadgeClass(campaign.Status)">
+                                    @campaign.Status
+                                </span>
+                            </td>
+                            <td>@campaign.LeadCount</td>
+                            <td>
+                                <span class="badge @(campaign.SchedulerEnabled ? "bg-success" : "bg-secondary")">
+                                    @(campaign.SchedulerEnabled ? "On" : "Off")
+                                </span>
+                            </td>
+                            <td>@campaign.CreatedAt.ToString("yyyy-MM-dd")</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => ViewCampaign(campaign.Id)">
+                                    View
+                                </button>
+                                <button class="btn btn-sm btn-outline-info" @onclick="() => DesignCampaign(campaign.Id)">
+                                    Design
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (showCreateModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5)">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create Campaign</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <EditForm Model="@newCampaign" OnValidSubmit="CreateCampaign">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Campaign Name</label>
+                            <InputText class="form-control" @bind-Value="newCampaign.Name" />
+                            <ValidationMessage For="@(() => newCampaign.Name)" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <InputTextArea class="form-control" @bind-Value="newCampaign.Description" rows="3" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Channel</label>
+                            <InputSelect class="form-select" @bind-Value="newCampaign.Channel">
+                                <option value="@ChannelType.Email">Email</option>
+                                <option value="@ChannelType.Call">Call</option>
+                                <option value="@ChannelType.VoiceBot">Voice Bot (Coming Soon)</option>
+                                <option value="@ChannelType.WhatsApp">WhatsApp (Coming Soon)</option>
+                                <option value="@ChannelType.SMS">SMS (Coming Soon)</option>
+                            </InputSelect>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary" disabled="@isCreating">
+                            @if (isCreating)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            Create
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private PagedResult<CampaignDto>? campaigns;
+    private bool isLoading = true;
+    private bool showCreateModal = false;
+    private bool isCreating = false;
+    private CreateCampaignRequest newCampaign = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCampaigns();
+    }
+
+    private async Task LoadCampaigns()
+    {
+        isLoading = true;
+        try
+        {
+            campaigns = await ApiService.GetAsync<PagedResult<CampaignDto>>("campaigns");
+        }
+        catch { }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowCreateModal()
+    {
+        newCampaign = new CreateCampaignRequest();
+        showCreateModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showCreateModal = false;
+    }
+
+    private async Task CreateCampaign()
+    {
+        isCreating = true;
+        try
+        {
+            var result = await ApiService.PostAsync<ApiResponse<CampaignDto>>("campaigns", newCampaign);
+            if (result?.Success == true)
+            {
+                showCreateModal = false;
+                await LoadCampaigns();
+            }
+        }
+        catch { }
+        finally
+        {
+            isCreating = false;
+        }
+    }
+
+    private void ViewCampaign(Guid id)
+    {
+        Navigation.NavigateTo($"/campaigns/{id}");
+    }
+
+    private void DesignCampaign(Guid id)
+    {
+        Navigation.NavigateTo($"/campaigns/{id}/design");
+    }
+
+    private string GetStatusBadgeClass(CampaignStatus status) => status switch
+    {
+        CampaignStatus.Draft => "bg-secondary",
+        CampaignStatus.Active => "bg-success",
+        CampaignStatus.Paused => "bg-warning",
+        CampaignStatus.Completed => "bg-info",
+        CampaignStatus.Archived => "bg-dark",
+        _ => "bg-secondary"
+    };
+}

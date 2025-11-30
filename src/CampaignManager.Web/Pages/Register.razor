@@ -1,0 +1,105 @@
+@page "/register"
+@layout MainLayout
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<PageTitle>Register - Campaign Manager</PageTitle>
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">Register Account</h4>
+            </div>
+            <div class="card-body">
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">@errorMessage</div>
+                }
+                
+                <EditForm Model="@registerRequest" OnValidSubmit="HandleRegister">
+                    <DataAnnotationsValidator />
+                    
+                    <div class="mb-3">
+                        <label for="firstName" class="form-label">First Name</label>
+                        <InputText id="firstName" class="form-control" @bind-Value="registerRequest.FirstName" placeholder="Enter first name" />
+                        <ValidationMessage For="@(() => registerRequest.FirstName)" />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="lastName" class="form-label">Last Name</label>
+                        <InputText id="lastName" class="form-control" @bind-Value="registerRequest.LastName" placeholder="Enter last name" />
+                        <ValidationMessage For="@(() => registerRequest.LastName)" />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email</label>
+                        <InputText id="email" class="form-control" @bind-Value="registerRequest.Email" placeholder="Enter email" />
+                        <ValidationMessage For="@(() => registerRequest.Email)" />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <InputText id="password" type="password" class="form-control" @bind-Value="registerRequest.Password" placeholder="Enter password (min 8 characters)" />
+                        <ValidationMessage For="@(() => registerRequest.Password)" />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="licenseKey" class="form-label">License Key (Optional)</label>
+                        <InputText id="licenseKey" class="form-control" @bind-Value="registerRequest.LicenseKey" placeholder="Enter license key if you have one" />
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success" disabled="@isLoading">
+                            @if (isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                            }
+                            Register
+                        </button>
+                    </div>
+                </EditForm>
+                
+                <hr />
+                
+                <div class="text-center">
+                    <p>Already have an account? <a href="login">Login</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private RegisterRequest registerRequest = new();
+    private string? errorMessage;
+    private bool isLoading = false;
+
+    private async Task HandleRegister()
+    {
+        isLoading = true;
+        errorMessage = null;
+        
+        try
+        {
+            var response = await AuthService.RegisterAsync(registerRequest);
+            
+            if (response.Success)
+            {
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                errorMessage = response.ErrorMessage ?? "Registration failed";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

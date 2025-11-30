@@ -1,0 +1,199 @@
+@page "/projects"
+@attribute [Authorize(Roles = "SuperAdmin")]
+@inject IApiService ApiService
+
+<PageTitle>Projects - Campaign Manager</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Projects (Tenants)</h1>
+    <button class="btn btn-primary" @onclick="ShowCreateModal">Create Project</button>
+</div>
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Users</th>
+                    <th>Campaigns</th>
+                    <th>License Key</th>
+                    <th>Expiry</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (projects?.Items != null)
+                {
+                    @foreach (var project in projects.Items)
+                    {
+                        <tr>
+                            <td>@project.Name</td>
+                            <td>@(project.Description ?? "-")</td>
+                            <td>@project.UserCount / @(project.License?.MaxUsers ?? 0)</td>
+                            <td>@project.CampaignCount / @(project.License?.MaxCampaigns ?? 0)</td>
+                            <td>
+                                <code>@(project.License?.LicenseKey ?? "N/A")</code>
+                            </td>
+                            <td>@(project.License?.ExpiryDate.ToString("yyyy-MM-dd") ?? "N/A")</td>
+                            <td>
+                                <span class="badge @(project.IsActive ? "bg-success" : "bg-danger")">
+                                    @(project.IsActive ? "Active" : "Inactive")
+                                </span>
+                                @if (project.License?.IsActivated == true)
+                                {
+                                    <span class="badge bg-info ms-1">Activated</span>
+                                }
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => EditProject(project)">Edit</button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteProject(project.Id)">Delete</button>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (showCreateModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5)">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(isEditing ? "Edit Project" : "Create Project")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <EditForm Model="@newProject" OnValidSubmit="SaveProject">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Project Name</label>
+                            <InputText class="form-control" @bind-Value="newProject.Name" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <InputTextArea class="form-control" @bind-Value="newProject.Description" rows="2" />
+                        </div>
+                        @if (!isEditing)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Max Users</label>
+                                <InputNumber class="form-control" @bind-Value="newProject.MaxUsers" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Max Campaigns</label>
+                                <InputNumber class="form-control" @bind-Value="newProject.MaxCampaigns" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">License Expiry Date</label>
+                                <InputDate class="form-control" @bind-Value="newProject.LicenseExpiryDate" />
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private PagedResult<ProjectDto>? projects;
+    private bool isLoading = true;
+    private bool showCreateModal = false;
+    private bool isEditing = false;
+    private Guid? editingProjectId;
+    private CreateProjectRequest newProject = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProjects();
+    }
+
+    private async Task LoadProjects()
+    {
+        isLoading = true;
+        try
+        {
+            projects = await ApiService.GetAsync<PagedResult<ProjectDto>>("projects");
+        }
+        catch { }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowCreateModal()
+    {
+        newProject = new CreateProjectRequest
+        {
+            MaxUsers = 10,
+            MaxCampaigns = 5,
+            LicenseExpiryDate = DateTime.Now.AddYears(1)
+        };
+        isEditing = false;
+        editingProjectId = null;
+        showCreateModal = true;
+    }
+
+    private void EditProject(ProjectDto project)
+    {
+        newProject = new CreateProjectRequest
+        {
+            Name = project.Name,
+            Description = project.Description
+        };
+        isEditing = true;
+        editingProjectId = project.Id;
+        showCreateModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showCreateModal = false;
+    }
+
+    private async Task SaveProject()
+    {
+        if (isEditing && editingProjectId.HasValue)
+        {
+            var update = new UpdateProjectRequest
+            {
+                Name = newProject.Name,
+                Description = newProject.Description
+            };
+            await ApiService.PutAsync<ApiResponse<ProjectDto>>($"projects/{editingProjectId}", update);
+        }
+        else
+        {
+            await ApiService.PostAsync<ApiResponse<ProjectDto>>("projects", newProject);
+        }
+
+        showCreateModal = false;
+        await LoadProjects();
+    }
+
+    private async Task DeleteProject(Guid id)
+    {
+        await ApiService.DeleteAsync($"projects/{id}");
+        await LoadProjects();
+    }
+}

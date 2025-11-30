@@ -1,0 +1,223 @@
+@page "/reports"
+@attribute [Authorize(Roles = "SuperAdmin,SubAdmin,Supervisor")]
+@inject IApiService ApiService
+
+<PageTitle>Reports - Campaign Manager</PageTitle>
+
+<h1>Reports & Dashboard</h1>
+
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <button class="nav-link @(activeTab == "dashboard" ? "active" : "")" @onclick='() => activeTab = "dashboard"'>
+            Dashboard
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link @(activeTab == "custom" ? "active" : "")" @onclick='() => activeTab = "custom"'>
+            Custom Reports
+        </button>
+    </li>
+    <li class="nav-item">
+        <button class="nav-link @(activeTab == "export" ? "active" : "")" @onclick='() => activeTab = "export"'>
+            Export Data
+        </button>
+    </li>
+</ul>
+
+@if (activeTab == "dashboard")
+{
+    @if (isLoading)
+    {
+        <div class="d-flex justify-content-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (summary != null)
+    {
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="text-muted">Total Campaigns</h6>
+                        <h2>@summary.TotalCampaigns</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="text-muted">Active Campaigns</h6>
+                        <h2 class="text-success">@summary.ActiveCampaigns</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="text-muted">Total Leads</h6>
+                        <h2>@summary.TotalLeads</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="text-muted">Processed</h6>
+                        <h2 class="text-info">@summary.ProcessedLeads</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Campaign Performance</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Campaign</th>
+                                <th>Total</th>
+                                <th>Queued</th>
+                                <th>Email Sent</th>
+                                <th>Dialed</th>
+                                <th>Connected</th>
+                                <th>RPC</th>
+                                <th>Disposed</th>
+                                <th>Conversion %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var stat in summary.CampaignStats)
+                            {
+                                var conversionRate = stat.TotalLeads > 0 
+                                    ? Math.Round((double)stat.DisposedCount / stat.TotalLeads * 100, 1) 
+                                    : 0;
+                                <tr>
+                                    <td>@stat.CampaignName</td>
+                                    <td>@stat.TotalLeads</td>
+                                    <td>@stat.QueuedCount</td>
+                                    <td>@stat.EmailSentCount</td>
+                                    <td>@stat.DialedCount</td>
+                                    <td>@stat.ConnectedCount</td>
+                                    <td>@stat.RightPartyContactCount</td>
+                                    <td>@stat.DisposedCount</td>
+                                    <td>
+                                        <span class="badge @(conversionRate >= 50 ? "bg-success" : conversionRate >= 25 ? "bg-warning" : "bg-danger")">
+                                            @conversionRate%
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+}
+else if (activeTab == "custom")
+{
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Custom Report Designer</h5>
+        </div>
+        <div class="card-body">
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label class="form-label">Select Tables</label>
+                    <select class="form-select" multiple>
+                        <option>Campaigns</option>
+                        <option>Leads</option>
+                        <option>Dispositions</option>
+                        <option>Users</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Select Fields</label>
+                    <select class="form-select" multiple>
+                        <option>Campaign Name</option>
+                        <option>Lead Status</option>
+                        <option>Agent Name</option>
+                        <option>Disposition Code</option>
+                        <option>Created Date</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Filters</label>
+                    <input type="text" class="form-control mb-2" placeholder="Date range..." />
+                    <input type="text" class="form-control" placeholder="Campaign..." />
+                </div>
+            </div>
+            <button class="btn btn-primary">Generate Report</button>
+            <p class="text-muted mt-3">
+                Custom report designer allows you to connect different tables and pull data based on your requirements.
+            </p>
+        </div>
+    </div>
+}
+else if (activeTab == "export")
+{
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Export Data</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Select Campaign</label>
+                        <select class="form-select">
+                            <option>All Campaigns</option>
+                            @if (summary?.CampaignStats != null)
+                            {
+                                @foreach (var stat in summary.CampaignStats)
+                                {
+                                    <option value="@stat.CampaignId">@stat.CampaignName</option>
+                                }
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Export Format</label>
+                        <select class="form-select">
+                            <option>Excel (.xlsx)</option>
+                            <option>CSV</option>
+                            <option>JSON</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-success">Export</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string activeTab = "dashboard";
+    private DashboardSummaryDto? summary;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            summary = await ApiService.GetAsync<DashboardSummaryDto>("dashboard/summary");
+        }
+        catch { }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

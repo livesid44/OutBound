@@ -8,5 +8,13 @@ publish/
 logs/
 *.db
 *.sqlite
-appsettings.json
 secrets.json
+
+# Keep appsettings for the new projects but ignore sensitive ones
+src/CampaignManager.Api/appsettings.Development.json
+
+# IDE
+.idea/
+
+# Test results
+TestResults/

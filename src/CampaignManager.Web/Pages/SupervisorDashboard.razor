@@ -1,0 +1,198 @@
+@page "/supervisor"
+@attribute [Authorize(Roles = "SuperAdmin,SubAdmin,Supervisor")]
+@inject IApiService ApiService
+
+<PageTitle>Supervisor Dashboard - Campaign Manager</PageTitle>
+
+<h1>Supervisor Dashboard</h1>
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (dashboard != null)
+{
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Online Agents</h5>
+                    <h2>@dashboard.OnlineAgentCount</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-secondary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Offline Agents</h5>
+                    <h2>@dashboard.OfflineAgentCount</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total Calls Today</h5>
+                    <h2>@dashboard.TotalCallsToday</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Successful Calls</h5>
+                    <h2>@dashboard.SuccessfulCallsToday</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Team Performance</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Agent</th>
+                            <th>Status</th>
+                            <th>Calls Handled</th>
+                            <th>Successful</th>
+                            <th>Last Activity</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var agent in dashboard.TeamPerformance)
+                        {
+                            <tr>
+                                <td>@agent.AgentName</td>
+                                <td>
+                                    <span class="badge @(agent.IsOnline ? "bg-success" : "bg-secondary")">
+                                        @(agent.IsOnline ? "Online" : "Offline")
+                                    </span>
+                                </td>
+                                <td>@agent.TotalCallsHandled</td>
+                                <td>@agent.SuccessfulDispositions</td>
+                                <td>@(agent.LastActivityAt?.ToString("HH:mm") ?? "-")</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => StartChat(agent.AgentId)">
+                                        Chat
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="alert alert-info">No team data available.</div>
+}
+
+@if (showChatModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5)">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Chat with @selectedAgentName</h5>
+                    <button type="button" class="btn-close" @onclick="CloseChatModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="chat-messages mb-3" style="height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;">
+                        @foreach (var message in chatMessages)
+                        {
+                            <div class="mb-2 @(message.SenderId == currentUserId ? "text-end" : "")">
+                                <small class="text-muted">@message.SenderName - @message.SentAt.ToString("HH:mm")</small>
+                                <p class="mb-0 @(message.SenderId == currentUserId ? "bg-primary text-white" : "bg-light") p-2 rounded">
+                                    @message.Message
+                                </p>
+                            </div>
+                        }
+                    </div>
+                    <div class="input-group">
+                        <input type="text" class="form-control" @bind="newMessage" placeholder="Type a message..." />
+                        <button class="btn btn-primary" @onclick="SendMessage">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private SupervisorDashboardDto? dashboard;
+    private bool isLoading = true;
+    private bool showChatModal = false;
+    private Guid? selectedAgentId;
+    private string selectedAgentName = "";
+    private List<ChatMessageDto> chatMessages = new();
+    private string newMessage = "";
+    private Guid currentUserId = Guid.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboard();
+    }
+
+    private async Task LoadDashboard()
+    {
+        isLoading = true;
+        try
+        {
+            dashboard = await ApiService.GetAsync<SupervisorDashboardDto>("dashboard/supervisor");
+        }
+        catch { }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void StartChat(Guid agentId)
+    {
+        selectedAgentId = agentId;
+        var agent = dashboard?.TeamPerformance.FirstOrDefault(a => a.AgentId == agentId);
+        selectedAgentName = agent?.AgentName ?? "Agent";
+        chatMessages = new List<ChatMessageDto>();
+        showChatModal = true;
+    }
+
+    private void CloseChatModal()
+    {
+        showChatModal = false;
+    }
+
+    private async Task SendMessage()
+    {
+        if (!string.IsNullOrWhiteSpace(newMessage) && selectedAgentId.HasValue)
+        {
+            var request = new SendMessageRequest
+            {
+                ReceiverId = selectedAgentId.Value,
+                Message = newMessage
+            };
+            // await ApiService.PostAsync("chat/send", request);
+            
+            chatMessages.Add(new ChatMessageDto
+            {
+                SenderName = "You",
+                SenderId = currentUserId,
+                Message = newMessage,
+                SentAt = DateTime.Now
+            });
+            
+            newMessage = "";
+        }
+    }
+}

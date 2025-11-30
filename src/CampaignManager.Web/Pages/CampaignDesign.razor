@@ -1,0 +1,356 @@
+@page "/campaigns/{CampaignId:guid}/design"
+@attribute [Authorize(Roles = "SuperAdmin,SubAdmin,Supervisor")]
+@inject IApiService ApiService
+@inject NavigationManager Navigation
+
+<PageTitle>Design Campaign - Campaign Manager</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Design Campaign</h1>
+    <button class="btn btn-outline-secondary" @onclick="GoBack">Back to Campaigns</button>
+</div>
+
+@if (isLoading)
+{
+    <div class="d-flex justify-content-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (campaign != null)
+{
+    <div class="row">
+        <div class="col-12">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Step 1: Basic Details</h5>
+                    <span class="badge @GetStatusBadgeClass(campaign.Status)">@campaign.Status</span>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Name:</strong> @campaign.Name</p>
+                            <p><strong>Description:</strong> @(campaign.Description ?? "N/A")</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Channel:</strong> @campaign.Channel</p>
+                            <p><strong>Created:</strong> @campaign.CreatedAt.ToString("yyyy-MM-dd HH:mm")</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Step 2: Define Input Feed (Fields)</h5>
+                    <button class="btn btn-sm btn-primary" @onclick="ShowAddFieldModal">Add Field</button>
+                </div>
+                <div class="card-body">
+                    @if (campaign.Fields.Any())
+                    {
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Field Name</th>
+                                    <th>Display Name</th>
+                                    <th>Type</th>
+                                    <th>Required</th>
+                                    <th>Order</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var field in campaign.Fields.OrderBy(f => f.DisplayOrder))
+                                {
+                                    <tr>
+                                        <td>@field.FieldName</td>
+                                        <td>@field.DisplayName</td>
+                                        <td>@field.FieldType</td>
+                                        <td>@(field.IsRequired ? "Yes" : "No")</td>
+                                        <td>@field.DisplayOrder</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteField(field.Id)">Delete</button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p class="text-muted">No fields defined yet. Add fields to define the data structure for this campaign.</p>
+                    }
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Step 3: Configure API</h5>
+                </div>
+                <div class="card-body">
+                    @if (campaign.Channel == ChannelType.Email)
+                    {
+                        <h6>SendGrid Configuration</h6>
+                        <EditForm Model="@apiConfig" OnValidSubmit="SaveApiConfig">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">API Key</label>
+                                    <InputText class="form-control" @bind-Value="apiConfig.SendGridApiKey" type="password" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">From Email</label>
+                                    <InputText class="form-control" @bind-Value="apiConfig.SendGridFromEmail" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">From Name</label>
+                                    <InputText class="form-control" @bind-Value="apiConfig.SendGridFromName" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Template ID</label>
+                                    <InputText class="form-control" @bind-Value="apiConfig.SendGridTemplateId" />
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-success">Save Email Config</button>
+                        </EditForm>
+                    }
+                    else if (campaign.Channel == ChannelType.Call)
+                    {
+                        <h6>WebEx Configuration</h6>
+                        <EditForm Model="@apiConfig" OnValidSubmit="SaveApiConfig">
+                            <div class="mb-3">
+                                <label class="form-label">API Endpoint</label>
+                                <InputText class="form-control" @bind-Value="apiConfig.WebExApiEndpoint" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Auth Token</label>
+                                <InputText class="form-control" @bind-Value="apiConfig.WebExAuthToken" type="password" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">CURL Command</label>
+                                <InputTextArea class="form-control" @bind-Value="apiConfig.WebExCurl" rows="3" />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Parameter Mappings (JSON)</label>
+                                <InputTextArea class="form-control" @bind-Value="apiConfig.ParameterMappings" rows="5" />
+                                <small class="text-muted">Map JSON parameters to feed fields</small>
+                            </div>
+                            <button type="submit" class="btn btn-success">Save Voice Config</button>
+                        </EditForm>
+                    }
+                    else
+                    {
+                        <p class="text-muted">Channel @campaign.Channel is coming soon!</p>
+                    }
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Step 4: Define Strategy</h5>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="@strategy" OnValidSubmit="SaveStrategy">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Max Email Attempts</label>
+                                <InputNumber class="form-control" @bind-Value="strategy.MaxEmailAttempts" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Max Call Attempts</label>
+                                <InputNumber class="form-control" @bind-Value="strategy.MaxCallAttempts" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Email Retry Interval (minutes)</label>
+                                <InputNumber class="form-control" @bind-Value="strategy.EmailRetryIntervalMinutes" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Call Retry Interval (minutes)</label>
+                                <InputNumber class="form-control" @bind-Value="strategy.CallRetryIntervalMinutes" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Working Days</label>
+                                <InputText class="form-control" @bind-Value="strategy.WorkingDays" placeholder="Mon,Tue,Wed,Thu,Fri" />
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success">Save Strategy</button>
+                    </EditForm>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end">
+                <button class="btn btn-primary me-2" @onclick="ActivateCampaign">Activate Campaign</button>
+                <button class="btn btn-outline-primary" @onclick="GoToDataUpload">Upload Data</button>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showFieldModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5)">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Field</h5>
+                    <button type="button" class="btn-close" @onclick="CloseFieldModal"></button>
+                </div>
+                <EditForm Model="@newField" OnValidSubmit="AddField">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Field Name (unique identifier)</label>
+                            <InputText class="form-control" @bind-Value="newField.FieldName" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Display Name</label>
+                            <InputText class="form-control" @bind-Value="newField.DisplayName" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Field Type</label>
+                            <InputSelect class="form-select" @bind-Value="newField.FieldType">
+                                <option value="@FieldType.String">String</option>
+                                <option value="@FieldType.Number">Number</option>
+                                <option value="@FieldType.Date">Date</option>
+                                <option value="@FieldType.Boolean">Boolean</option>
+                                <option value="@FieldType.Email">Email</option>
+                                <option value="@FieldType.Phone">Phone</option>
+                            </InputSelect>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="newField.IsRequired" />
+                            <label class="form-check-label">Required</label>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Display Order</label>
+                            <InputNumber class="form-control" @bind-Value="newField.DisplayOrder" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseFieldModal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public Guid CampaignId { get; set; }
+
+    private CampaignDto? campaign;
+    private UpdateApiConfigRequest apiConfig = new();
+    private UpdateStrategyRequest strategy = new();
+    private CreateCampaignFieldRequest newField = new();
+    private bool isLoading = true;
+    private bool showFieldModal = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCampaign();
+    }
+
+    private async Task LoadCampaign()
+    {
+        isLoading = true;
+        try
+        {
+            campaign = await ApiService.GetAsync<CampaignDto>($"campaigns/{CampaignId}");
+            if (campaign?.ApiConfig != null)
+            {
+                apiConfig = new UpdateApiConfigRequest
+                {
+                    SendGridApiKey = campaign.ApiConfig.SendGridApiKey,
+                    SendGridFromEmail = campaign.ApiConfig.SendGridFromEmail,
+                    SendGridFromName = campaign.ApiConfig.SendGridFromName,
+                    SendGridTemplateId = campaign.ApiConfig.SendGridTemplateId,
+                    WebExApiEndpoint = campaign.ApiConfig.WebExApiEndpoint,
+                    WebExAuthToken = campaign.ApiConfig.WebExAuthToken,
+                    WebExCurl = campaign.ApiConfig.WebExCurl,
+                    ParameterMappings = campaign.ApiConfig.ParameterMappings
+                };
+            }
+            if (campaign?.Strategy != null)
+            {
+                strategy = new UpdateStrategyRequest
+                {
+                    MaxEmailAttempts = campaign.Strategy.MaxEmailAttempts,
+                    MaxCallAttempts = campaign.Strategy.MaxCallAttempts,
+                    EmailRetryIntervalMinutes = campaign.Strategy.EmailRetryIntervalMinutes,
+                    CallRetryIntervalMinutes = campaign.Strategy.CallRetryIntervalMinutes,
+                    WorkingDays = campaign.Strategy.WorkingDays
+                };
+            }
+        }
+        catch { }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ShowAddFieldModal()
+    {
+        newField = new CreateCampaignFieldRequest { DisplayOrder = campaign?.Fields.Count ?? 0 };
+        showFieldModal = true;
+    }
+
+    private void CloseFieldModal()
+    {
+        showFieldModal = false;
+    }
+
+    private async Task AddField()
+    {
+        var result = await ApiService.PostAsync<ApiResponse<CampaignFieldDto>>($"campaigns/{CampaignId}/fields", newField);
+        if (result?.Success == true)
+        {
+            showFieldModal = false;
+            await LoadCampaign();
+        }
+    }
+
+    private async Task DeleteField(Guid fieldId)
+    {
+        await ApiService.DeleteAsync($"campaigns/fields/{fieldId}");
+        await LoadCampaign();
+    }
+
+    private async Task SaveApiConfig()
+    {
+        await ApiService.PutAsync<ApiResponse<CampaignApiConfigDto>>($"campaigns/{CampaignId}/api-config", apiConfig);
+    }
+
+    private async Task SaveStrategy()
+    {
+        await ApiService.PutAsync<ApiResponse<CampaignStrategyDto>>($"campaigns/{CampaignId}/strategy", strategy);
+    }
+
+    private async Task ActivateCampaign()
+    {
+        var update = new UpdateCampaignRequest { Status = CampaignStatus.Active };
+        await ApiService.PutAsync<ApiResponse<CampaignDto>>($"campaigns/{CampaignId}", update);
+        await LoadCampaign();
+    }
+
+    private void GoToDataUpload()
+    {
+        Navigation.NavigateTo($"/campaigns/{CampaignId}/upload");
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/campaigns");
+    }
+
+    private string GetStatusBadgeClass(CampaignStatus status) => status switch
+    {
+        CampaignStatus.Draft => "bg-secondary",
+        CampaignStatus.Active => "bg-success",
+        CampaignStatus.Paused => "bg-warning",
+        CampaignStatus.Completed => "bg-info",
+        CampaignStatus.Archived => "bg-dark",
+        _ => "bg-secondary"
+    };
+}

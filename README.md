@@ -1,46 +1,171 @@
-```markdown
-# mail-graph-sqlserver
+# Campaign Manager
 
-C# Console app that reads a service mailbox via Microsoft Graph (app-only) and stores emails into Microsoft SQL Server (tested with SQL Server 2019).
+A comprehensive multi-tenant campaign management system built with modern Microsoft stack (Blazor WebAssembly + ASP.NET Core API + Entity Framework Core + SQL Server).
 
-Features
-- App-only (client credentials) OAuth 2.0 via MSAL
-- Reads messages for a specified mailbox and stores:
-  - unique DB id, Graph message id, internet message id, subject
-  - body HTML and plain-text extracted body
-  - sentTo, sentFrom, cc, bcc, sent/received timestamps
-  - raw Graph JSON of the message for diagnostics
-- Checkpointing with last_run_utc to process only new messages (safe for scheduled Task Scheduler runs)
-- Structured logging (Serilog) to console and rolling file
-- Retry/backoff for transient Graph errors
-- Idempotent inserts (avoids duplicates on overlapping runs) based on MessageId UNIQUE constraint
+## Features
 
-Important configuration
-- Put your SQL Server connection string into ConnectionStrings:DefaultConnection in appsettings.json.
-  Example:
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=your-server;Database=MailDb;User Id=dbuser;Password=DB_PASSWORD;TrustServerCertificate=True;Encrypt=True;"
-  }
+### 1. Multi-Tenant System
+- SuperAdmin can create projects/tenants with licensing
+- License key activation with user and campaign limits
+- Pre-login registration with license key
 
-- Make sure the DB exists (create the database MailDb) and the SQL user has CREATE TABLE or appropriate schema permissions for the first run, or create the tables manually.
+### 2. User Management
+- Individual and bulk user creation
+- Role-based access: SuperAdmin, SubAdmin, Supervisor, Agent
+- Supervisor-agent mapping
 
-Security
-- Do not check secrets (client secret, DB password) into source control.
-- For production, consider storing secrets in Azure Key Vault or using managed identities.
+### 3. Campaign Designer
+- Basic details (name, description, channel selection)
+- Dynamic field definition for campaign data
+- API configuration for:
+  - **Email**: SendGrid integration
+  - **Voice/Call**: WebEx CURL with JSON parameter mapping
+- Strategy definition (retry attempts, intervals, working hours)
 
-Build & Run
-- Build:
-  dotnet build
-- Run:
-  dotnet run
-- Publish for Windows Task Scheduler:
-  dotnet publish -c Release -r win-x64 --self-contained false -o publish
+### 4. Scheduler & Monitor
+- Toggle scheduler on/off per campaign
+- Real-time queue monitoring:
+  - Email queue vs Voice queue
+  - Lead status: Queued → Dialed → Connected → RPC → Disposed
 
-Task Scheduler notes
-- Use an absolute connection string and ensure the scheduled task runs as a service account that can read the publish folder.
-- The app uses a metadata key "last_run_utc" stored in the Metadata table in the database. Each run:
-  - Reads last_run_utc (defaults to UTC now - 7 days on first run),
-  - Queries messages receivedDateTime >= last_run_utc and < nowUtc,
-  - Inserts messages idempotently,
-  - Updates last_run_utc to nowUtc on successful completion.
+### 5. Reports & Dashboard
+- Campaign performance overview
+- Custom report designer
+- Supervisor dashboard with team performance
+- Agent online status tracking
+
+### 6. Agent UI
+- WebEx CTI integration
+- Customer information display
+- Disposition form with callback scheduling
+- Supervisor chat
+
+### 7. Data Upload
+- Campaign-specific field templates
+- Excel/CSV file upload
+- API endpoint for bulk data push
+
+## Project Structure
+
 ```
+CampaignManager/
+├── src/
+│   ├── CampaignManager.Shared/       # Shared models and DTOs
+│   ├── CampaignManager.Data/         # Entity Framework DbContext and repositories
+│   ├── CampaignManager.Api/          # ASP.NET Core Web API
+│   └── CampaignManager.Web/          # Blazor WebAssembly UI
+└── CampaignManager.sln
+```
+
+## Technology Stack
+
+- **Frontend**: Blazor WebAssembly (.NET 8)
+- **Backend**: ASP.NET Core 8 Web API
+- **Database**: Microsoft SQL Server with Entity Framework Core
+- **Authentication**: JWT Bearer tokens
+- **Email**: SendGrid integration
+- **Voice**: WebEx CTI integration
+
+## Getting Started
+
+### Prerequisites
+- .NET 8 SDK
+- SQL Server (LocalDB or full instance)
+
+### Configuration
+
+1. Update connection string in `src/CampaignManager.Api/appsettings.json`:
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=CampaignManagerDb;..."
+  },
+  "JwtSettings": {
+    "SecretKey": "YourSuperSecretKeyThatIsAtLeast32CharactersLong!",
+    "Issuer": "CampaignManager",
+    "Audience": "CampaignManagerClients"
+  }
+}
+```
+
+2. Update API URL in `src/CampaignManager.Web/wwwroot/appsettings.json`:
+```json
+{
+  "ApiBaseUrl": "https://localhost:7001"
+}
+```
+
+### Build & Run
+
+```bash
+# Build solution
+dotnet build CampaignManager.sln
+
+# Run API
+cd src/CampaignManager.Api
+dotnet run
+
+# Run Blazor Web (in another terminal)
+cd src/CampaignManager.Web
+dotnet run
+```
+
+### Default Admin Account
+- Email: `admin@campaignmanager.local`
+- Password: `Admin@123`
+
+## API Endpoints
+
+### Authentication
+- `POST /api/auth/login` - User login
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/activate-license` - Activate license key
+
+### Projects (SuperAdmin only)
+- `GET /api/projects` - List projects
+- `POST /api/projects` - Create project with license
+- `PUT /api/projects/{id}` - Update project
+- `DELETE /api/projects/{id}` - Delete project
+
+### Users
+- `GET /api/users` - List users
+- `POST /api/users` - Create user
+- `POST /api/users/bulk` - Bulk create users
+- `PUT /api/users/{id}` - Update user
+- `DELETE /api/users/{id}` - Delete user
+
+### Campaigns
+- `GET /api/campaigns` - List campaigns
+- `POST /api/campaigns` - Create campaign
+- `GET /api/campaigns/{id}` - Get campaign details
+- `PUT /api/campaigns/{id}` - Update campaign
+- `DELETE /api/campaigns/{id}` - Delete campaign
+- `GET /api/campaigns/{id}/fields` - Get campaign fields
+- `POST /api/campaigns/{id}/fields` - Add field
+- `PUT /api/campaigns/{id}/api-config` - Update API configuration
+- `PUT /api/campaigns/{id}/strategy` - Update strategy
+- `POST /api/campaigns/{id}/scheduler/toggle` - Toggle scheduler
+
+### Leads
+- `GET /api/campaigns/{id}/leads` - List leads
+- `POST /api/campaigns/{id}/leads` - Create lead
+- `POST /api/campaigns/{id}/leads/bulk` - Bulk upload leads
+- `POST /api/leads/{id}/dispose` - Dispose lead
+
+### Dashboard
+- `GET /api/dashboard/summary` - Dashboard summary
+- `GET /api/dashboard/supervisor` - Supervisor dashboard
+- `GET /api/dashboard/agent-performance` - Agent performance
+
+## Legacy Code
+
+The original `mail-graph-sqlite` console application files remain in the repository root for reference:
+- `Program.cs` - Original console app
+- `Database.cs`, `EmailRecord.cs`, `GraphHelper.cs`, `GraphAuthProvider.cs` - Original Graph API integration
+
+## Security Notes
+
+- Never commit secrets to source control
+- Use Azure Key Vault or environment variables for production secrets
+- Change default admin password immediately
+- Configure CORS appropriately for production

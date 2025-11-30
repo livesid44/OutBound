@@ -1,0 +1,116 @@
+﻿@page "/"
+@attribute [Authorize]
+@inject IApiService ApiService
+
+<PageTitle>Dashboard - Campaign Manager</PageTitle>
+
+<h1>Dashboard</h1>
+
+<AuthorizeView>
+    <Authorized>
+        @if (isLoading)
+        {
+            <div class="d-flex justify-content-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else if (summary != null)
+        {
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Campaigns</h5>
+                            <h2>@summary.TotalCampaigns</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Active Campaigns</h5>
+                            <h2>@summary.ActiveCampaigns</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Leads</h5>
+                            <h2>@summary.TotalLeads</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning">
+                        <div class="card-body">
+                            <h5 class="card-title">Pending Leads</h5>
+                            <h2>@summary.PendingLeads</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <h3>Campaign Performance</h3>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Campaign</th>
+                            <th>Total</th>
+                            <th>Queued</th>
+                            <th>Email Sent</th>
+                            <th>Dialed</th>
+                            <th>Connected</th>
+                            <th>Disposed</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var campaign in summary.CampaignStats)
+                        {
+                            <tr>
+                                <td>@campaign.CampaignName</td>
+                                <td>@campaign.TotalLeads</td>
+                                <td>@campaign.QueuedCount</td>
+                                <td>@campaign.EmailSentCount</td>
+                                <td>@campaign.DialedCount</td>
+                                <td>@campaign.ConnectedCount</td>
+                                <td>@campaign.DisposedCount</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                <p>Welcome to Campaign Manager!</p>
+                <p>Start by creating a campaign or uploading data.</p>
+            </div>
+        }
+    </Authorized>
+</AuthorizeView>
+
+@code {
+    private DashboardSummaryDto? summary;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            summary = await ApiService.GetAsync<DashboardSummaryDto>("dashboard/summary");
+        }
+        catch
+        {
+            // Handle error
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
