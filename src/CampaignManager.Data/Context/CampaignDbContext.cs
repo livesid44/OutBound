@@ -52,7 +52,7 @@ public class CampaignDbContext : DbContext
             entity.HasOne(e => e.Supervisor)
                   .WithMany(s => s.Subordinates)
                   .HasForeignKey(e => e.SupervisorId)
-                  .OnDelete(DeleteBehavior.SetNull);
+                  .OnDelete(DeleteBehavior.NoAction);  // Changed to NoAction to avoid cascade cycles
         });
 
         // Campaign configuration
@@ -94,10 +94,23 @@ public class CampaignDbContext : DbContext
                   .WithMany(c => c.Leads)
                   .HasForeignKey(e => e.CampaignId)
                   .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(e => e.AssignedAgent)
+                  .WithMany()
+                  .HasForeignKey(e => e.AssignedAgentId)
+                  .OnDelete(DeleteBehavior.NoAction);  // Avoid cascade conflicts with User table
             entity.HasOne(e => e.Disposition)
                   .WithOne(d => d.Lead)
                   .HasForeignKey<LeadDisposition>(d => d.LeadId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // LeadDisposition configuration
+        modelBuilder.Entity<LeadDisposition>(entity =>
+        {
+            entity.HasOne(e => e.DisposedBy)
+                  .WithMany()
+                  .HasForeignKey(e => e.DisposedById)
+                  .OnDelete(DeleteBehavior.NoAction);  // Avoid cascade conflicts with User table
         });
 
         // Disposition configuration
