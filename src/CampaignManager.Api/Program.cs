@@ -74,11 +74,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 // CORS for Blazor WebAssembly
+// Get allowed origins from configuration, with fallback defaults
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() 
+    ?? new[] { "https://localhost:5001", "http://localhost:5000", "https://localhost:7110", "http://localhost:7110" };
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowBlazor", policy =>
     {
-        policy.WithOrigins("https://localhost:5001", "http://localhost:5000")
+        policy.WithOrigins(allowedOrigins)
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
