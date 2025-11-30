@@ -10,6 +10,8 @@ This guide provides step-by-step instructions for setting up the Campaign Manage
 4. [Running the Application](#running-the-application)
 5. [Sample Users and Data](#sample-users-and-data)
 6. [Troubleshooting](#troubleshooting)
+7. [Production Deployment](#production-deployment)
+8. [IIS Deployment](#iis-deployment)
 
 ---
 
@@ -286,3 +288,103 @@ For production deployment:
 4. **Logging**:
    - Configure appropriate log levels
    - Set up centralized logging (e.g., Application Insights)
+
+---
+
+## IIS Deployment
+
+### Prerequisites for IIS
+
+1. **Install the ASP.NET Core Hosting Bundle**
+   - Download from: https://dotnet.microsoft.com/download/dotnet/8.0
+   - Select "Hosting Bundle" under "Run apps - Runtime"
+   - This installs the .NET Runtime, .NET Core Runtime, and the ASP.NET Core Module
+
+2. **Enable IIS Features**
+   - Windows Features → Internet Information Services
+   - Enable: Web Management Tools, World Wide Web Services
+
+3. **Install URL Rewrite Module** (for Blazor WebAssembly)
+   - Download from: https://www.iis.net/downloads/microsoft/url-rewrite
+
+### Deploy the API (CampaignManager.Api)
+
+1. **Publish the API:**
+   ```bash
+   cd src/CampaignManager.Api
+   dotnet publish -c Release -o ./publish
+   ```
+
+2. **Create IIS Site:**
+   - Open IIS Manager
+   - Right-click on Sites → Add Website
+   - Site name: `CampaignManagerApi`
+   - Physical path: Point to the `publish` folder
+   - Port: 7001 (or your preferred port)
+   - Application Pool: Create new pool with "No Managed Code"
+
+3. **Configure Application Pool:**
+   - Select the application pool
+   - Advanced Settings → Identity → Set to a user with database access
+
+### Deploy the Blazor Web UI (CampaignManager.Web)
+
+1. **Publish the Web UI:**
+   ```bash
+   cd src/CampaignManager.Web
+   dotnet publish -c Release -o ./publish
+   ```
+
+2. **Create IIS Site:**
+   - Open IIS Manager
+   - Right-click on Sites → Add Website
+   - Site name: `CampaignManagerWeb`
+   - Physical path: Point to the `publish/wwwroot` folder
+   - Port: 5001 (or your preferred port)
+
+3. **Important**: The `web.config` in `wwwroot` handles:
+   - MIME types for .wasm, .dll, and other Blazor files
+   - SPA fallback routing for client-side navigation
+   - Compression settings
+
+### Troubleshooting IIS Deployment
+
+#### HTTP 500.19 - Invalid Configuration
+
+**Common Causes:**
+1. Missing URL Rewrite Module
+2. Invalid web.config syntax
+3. Missing ASP.NET Core Hosting Bundle
+
+**Solutions:**
+1. Install URL Rewrite Module: https://www.iis.net/downloads/microsoft/url-rewrite
+2. Install ASP.NET Core Hosting Bundle
+3. Verify web.config is valid XML
+4. Check IIS Manager → Error Pages for detailed errors
+
+#### HTTP 502.5 - Process Failure
+
+**Solutions:**
+1. Verify .NET 8 Runtime is installed
+2. Check the `stdout` log in the `logs` folder
+3. Run the application from command line to see errors:
+   ```bash
+   cd publish
+   dotnet CampaignManager.Api.dll
+   ```
+
+#### Blazor WASM Files Not Loading
+
+**Solutions:**
+1. Verify MIME types are configured in web.config
+2. Check that URL Rewrite Module is installed
+3. Ensure `web.config` is in the `wwwroot` folder
+
+### IIS Configuration Files
+
+The repository includes pre-configured `web.config` files:
+
+- `src/CampaignManager.Api/web.config` - For ASP.NET Core API hosting
+- `src/CampaignManager.Web/wwwroot/web.config` - For Blazor WebAssembly hosting
+
+These files are automatically copied during publish.
