@@ -108,7 +108,32 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<CampaignDbContext>();
-    await dbContext.Database.EnsureCreatedAsync();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    
+    try
+    {
+        // Try to ensure database is created
+        var created = await dbContext.Database.EnsureCreatedAsync();
+        if (created)
+        {
+            logger.LogInformation("Database created successfully with seed data.");
+        }
+        
+        // Verify the schema by performing a simple query
+        // This will throw an exception if columns are missing
+        var testQuery = await dbContext.Users.Take(1).Select(u => new { u.Id, u.FirstName, u.LastName, u.Email }).ToListAsync();
+        logger.LogInformation("Database schema verified successfully.");
+    }
+    catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Message.Contains("Invalid column name") || ex.Message.Contains("Invalid object name"))
+    {
+        // Schema is outdated - recreate the database
+        logger.LogWarning("Database schema is outdated. Recreating database...");
+        
+        await dbContext.Database.EnsureDeletedAsync();
+        await dbContext.Database.EnsureCreatedAsync();
+        
+        logger.LogInformation("Database recreated successfully with new schema and seed data.");
+    }
 }
 
 app.Run();

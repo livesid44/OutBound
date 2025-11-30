@@ -250,12 +250,29 @@ A demo email campaign is created with:
 - Check token expiration
 - Clear browser local storage and re-login
 
-#### 4. Database Tables Not Created
+#### 4. Database Tables Not Created or Invalid Column Names
+
+**Error**: `Invalid column name 'FirstName'` or similar column name errors
+
+**Cause**: The database exists but has an outdated schema from a previous version.
 
 **Solution**:
-- Delete the database and restart the API
-- Check for migration errors in the console
-- Verify connection string is correct
+The API now automatically detects schema mismatches and recreates the database. If you still encounter this issue:
+
+1. **Option A**: Delete the database manually and restart the API
+   ```sql
+   DROP DATABASE CampaignManagerDb;
+   ```
+
+2. **Option B**: Use SQL Server Management Studio to delete the database
+   - Connect to your SQL Server
+   - Right-click `CampaignManagerDb` → Delete
+   - Check "Close existing connections"
+   - Click OK
+
+3. Restart the API - it will recreate the database with the correct schema and seed data.
+
+**Note**: This is a development convenience. For production, use proper EF Core migrations.
 
 ### Getting Help
 
