@@ -24,18 +24,27 @@ public class ApiService : IApiService
         _localStorage = localStorage;
     }
 
-    private async Task SetAuthHeaderAsync()
+    private async Task SetHeadersAsync()
     {
         var token = await _localStorage.GetItemAsync<string>("authToken");
         if (!string.IsNullOrEmpty(token))
         {
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
+
+        // Add selected project ID header for SuperAdmin tenant selection
+        var selectedProjectId = await _localStorage.GetItemAsync<string>("selectedProjectId");
+        if (!string.IsNullOrEmpty(selectedProjectId))
+        {
+            // Remove existing header if present
+            _httpClient.DefaultRequestHeaders.Remove("X-Project-Id");
+            _httpClient.DefaultRequestHeaders.Add("X-Project-Id", selectedProjectId);
+        }
     }
 
     public async Task<T?> GetAsync<T>(string endpoint)
     {
-        await SetAuthHeaderAsync();
+        await SetHeadersAsync();
         try
         {
             return await _httpClient.GetFromJsonAsync<T>($"api/{endpoint}");
@@ -48,7 +57,7 @@ public class ApiService : IApiService
 
     public async Task<T?> PostAsync<T>(string endpoint, object? data = null)
     {
-        await SetAuthHeaderAsync();
+        await SetHeadersAsync();
         try
         {
             var response = await _httpClient.PostAsJsonAsync($"api/{endpoint}", data);
@@ -66,7 +75,7 @@ public class ApiService : IApiService
 
     public async Task<T?> PutAsync<T>(string endpoint, object? data = null)
     {
-        await SetAuthHeaderAsync();
+        await SetHeadersAsync();
         try
         {
             var response = await _httpClient.PutAsJsonAsync($"api/{endpoint}", data);
@@ -84,7 +93,7 @@ public class ApiService : IApiService
 
     public async Task<bool> DeleteAsync(string endpoint)
     {
-        await SetAuthHeaderAsync();
+        await SetHeadersAsync();
         try
         {
             var response = await _httpClient.DeleteAsync($"api/{endpoint}");

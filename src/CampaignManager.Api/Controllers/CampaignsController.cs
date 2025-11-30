@@ -1,9 +1,11 @@
 using System.Security.Claims;
 using CampaignManager.Api.Services;
+using CampaignManager.Data.Repositories;
 using CampaignManager.Shared.DTOs;
 using CampaignManager.Shared.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace CampaignManager.Api.Controllers;
 
@@ -14,11 +16,13 @@ public class CampaignsController : ControllerBase
 {
     private readonly ICampaignService _campaignService;
     private readonly ILeadService _leadService;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public CampaignsController(ICampaignService campaignService, ILeadService leadService)
+    public CampaignsController(ICampaignService campaignService, ILeadService leadService, IUnitOfWork unitOfWork)
     {
         _campaignService = campaignService;
         _leadService = leadService;
+        _unitOfWork = unitOfWork;
     }
 
     [HttpGet("{id:guid}")]
@@ -35,7 +39,7 @@ public class CampaignsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<PagedResult<CampaignDto>>> GetCampaigns([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        var projectId = GetCurrentProjectId();
+        var projectId = await GetCurrentProjectIdAsync();
         if (projectId == null)
         {
             return BadRequest("Project context required");
@@ -49,11 +53,11 @@ public class CampaignsController : ControllerBase
     [Authorize(Roles = "SuperAdmin,SubAdmin,Supervisor")]
     public async Task<ActionResult<ApiResponse<CampaignDto>>> Create([FromBody] CreateCampaignRequest request)
     {
-        var projectId = GetCurrentProjectId();
+        var projectId = await GetCurrentProjectIdAsync();
         var userId = GetCurrentUserId();
         if (projectId == null || userId == null)
         {
-            return BadRequest(ApiResponse<CampaignDto>.ErrorResponse("Project and user context required"));
+            return BadRequest(ApiResponse<CampaignDto>.ErrorResponse("Project and user context required. SuperAdmin users should have at least one project in the system."));
         }
 
         var result = await _campaignService.CreateCampaignAsync(projectId.Value, userId.Value, request);
@@ -243,6 +247,42 @@ public class CampaignsController : ControllerBase
         {
             return projectId;
         }
+        return null;
+    }
+
+    /// <summary>
+    /// Gets the current user's project ID. For SuperAdmin users,
+    /// checks for X-Project-Id header for tenant selection.
+    /// </summary>
+    private async Task<Guid?> GetCurrentProjectIdAsync()
+    {
+        // For SuperAdmin, check for X-Project-Id header (tenant selection)
+        var roleClaim = User.FindFirst(ClaimTypes.Role);
+        if (roleClaim?.Value == "SuperAdmin")
+        {
+            // Check header first
+            if (Request.Headers.TryGetValue("X-Project-Id", out var headerValue) && 
+                Guid.TryParse(headerValue.FirstOrDefault(), out var headerProjectId))
+            {
+                return headerProjectId;
+            }
+            
+            // Fallback to first available project
+            var firstProject = await _unitOfWork.Repository<Project>()
+                .Query()
+                .OrderBy(p => p.CreatedAt)
+                .FirstOrDefaultAsync();
+            
+            return firstProject?.Id;
+        }
+
+        // For other users, get from JWT claim
+        var projectIdClaim = User.FindFirst("ProjectId");
+        if (projectIdClaim != null && Guid.TryParse(projectIdClaim.Value, out var projectId))
+        {
+            return projectId;
+        }
+
         return null;
     }
 }

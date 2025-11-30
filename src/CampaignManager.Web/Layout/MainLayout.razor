@@ -1,6 +1,9 @@
 @inherits LayoutComponentBase
 @inject IAuthService AuthService
+@inject IApiService ApiService
 @inject NavigationManager Navigation
+@using CampaignManager.Shared.DTOs
+@using CampaignManager.Shared.Models
 
 <AuthorizeView>
     <Authorized>
@@ -10,12 +13,43 @@
             </div>
 
             <main>
-                <div class="top-row px-4">
-                    <span class="me-3">Welcome, @context.User.Identity?.Name</span>
+                <div class="top-row px-4 d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <span class="me-3">Welcome, @context.User.Identity?.Name</span>
+                        @if (context.User.IsInRole("SuperAdmin"))
+                        {
+                            <div class="tenant-selector me-3">
+                                <label class="me-2 text-white-50">Tenant:</label>
+                                <select class="form-select form-select-sm d-inline-block w-auto" 
+                                        value="@_selectedProjectId" 
+                                        @onchange="OnProjectChanged">
+                                    <option value="">-- Select Tenant --</option>
+                                    @if (_projects != null)
+                                    {
+                                        @foreach (var project in _projects)
+                                        {
+                                            <option value="@project.Id">@project.Name</option>
+                                        }
+                                    }
+                                </select>
+                                @if (!string.IsNullOrEmpty(_selectedProjectName))
+                                {
+                                    <span class="badge bg-success ms-2">@_selectedProjectName</span>
+                                }
+                            </div>
+                        }
+                    </div>
                     <button class="btn btn-outline-light btn-sm" @onclick="Logout">Logout</button>
                 </div>
 
                 <article class="content px-4">
+                    @if (_isSuperAdmin && string.IsNullOrEmpty(_selectedProjectId))
+                    {
+                        <div class="alert alert-warning mt-3">
+                            <h4 class="alert-heading">Select a Tenant</h4>
+                            <p>As a SuperAdmin, please select a tenant (project) from the dropdown above to perform tenant-specific actions like creating campaigns, managing users, or uploading data.</p>
+                        </div>
+                    }
                     @Body
                 </article>
             </main>
@@ -29,6 +63,73 @@
 </AuthorizeView>
 
 @code {
+    private List<ProjectDto>? _projects;
+    private string _selectedProjectId = "";
+    private string? _selectedProjectName;
+    private bool _isSuperAdmin = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserContext();
+    }
+
+    private async Task LoadUserContext()
+    {
+        var user = await AuthService.GetCurrentUserAsync();
+        if (user != null)
+        {
+            _isSuperAdmin = user.Role == UserRole.SuperAdmin;
+            
+            if (_isSuperAdmin)
+            {
+                // Load projects for SuperAdmin
+                await LoadProjects();
+                
+                // Restore previously selected project
+                var savedProjectId = await AuthService.GetSelectedProjectIdAsync();
+                if (savedProjectId.HasValue)
+                {
+                    _selectedProjectId = savedProjectId.Value.ToString();
+                    _selectedProjectName = await AuthService.GetSelectedProjectNameAsync();
+                }
+            }
+        }
+    }
+
+    private async Task LoadProjects()
+    {
+        try
+        {
+            var result = await ApiService.GetAsync<PagedResult<ProjectDto>>("projects?pageSize=100");
+            _projects = result?.Items;
+        }
+        catch
+        {
+            _projects = new List<ProjectDto>();
+        }
+    }
+
+    private async Task OnProjectChanged(ChangeEventArgs e)
+    {
+        var projectId = e.Value?.ToString();
+        if (!string.IsNullOrEmpty(projectId) && Guid.TryParse(projectId, out var guid))
+        {
+            _selectedProjectId = projectId;
+            var project = _projects?.FirstOrDefault(p => p.Id == guid);
+            _selectedProjectName = project?.Name ?? "";
+            await AuthService.SetSelectedProjectAsync(guid, _selectedProjectName);
+            
+            // Refresh the current page to reload data with new tenant context
+            Navigation.NavigateTo(Navigation.Uri, forceLoad: true);
+        }
+        else
+        {
+            _selectedProjectId = "";
+            _selectedProjectName = null;
+            await AuthService.ClearSelectedProjectAsync();
+        }
+    }
+
     private async Task Logout()
     {
         await AuthService.LogoutAsync();

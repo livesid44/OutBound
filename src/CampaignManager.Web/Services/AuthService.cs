@@ -11,6 +11,11 @@ public interface IAuthService
     Task LogoutAsync();
     Task<UserDto?> GetCurrentUserAsync();
     Task<bool> IsAuthenticatedAsync();
+    Task<Guid?> GetSelectedProjectIdAsync();
+    Task SetSelectedProjectAsync(Guid projectId, string projectName);
+    Task<string?> GetSelectedProjectNameAsync();
+    Task ClearSelectedProjectAsync();
+    event Action? OnProjectChanged;
 }
 
 public class AuthService : IAuthService
@@ -18,6 +23,8 @@ public class AuthService : IAuthService
     private readonly HttpClient _httpClient;
     private readonly ILocalStorageService _localStorage;
     private readonly CustomAuthStateProvider _authStateProvider;
+
+    public event Action? OnProjectChanged;
 
     public AuthService(HttpClient httpClient, ILocalStorageService localStorage, 
         Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider authStateProvider)
@@ -38,6 +45,11 @@ public class AuthService : IAuthService
             {
                 await _localStorage.SetItemAsync("authToken", loginResponse.Token);
                 await _localStorage.SetItemAsync("user", loginResponse.User);
+                
+                // Clear any previously selected project on new login
+                await _localStorage.RemoveItemAsync("selectedProjectId");
+                await _localStorage.RemoveItemAsync("selectedProjectName");
+                
                 _authStateProvider.NotifyAuthStateChanged();
             }
             
@@ -75,6 +87,8 @@ public class AuthService : IAuthService
     {
         await _localStorage.RemoveItemAsync("authToken");
         await _localStorage.RemoveItemAsync("user");
+        await _localStorage.RemoveItemAsync("selectedProjectId");
+        await _localStorage.RemoveItemAsync("selectedProjectName");
         _authStateProvider.NotifyAuthStateChanged();
     }
 
@@ -87,5 +101,34 @@ public class AuthService : IAuthService
     {
         var token = await _localStorage.GetItemAsync<string>("authToken");
         return !string.IsNullOrEmpty(token);
+    }
+
+    public async Task<Guid?> GetSelectedProjectIdAsync()
+    {
+        var projectIdStr = await _localStorage.GetItemAsync<string>("selectedProjectId");
+        if (Guid.TryParse(projectIdStr, out var projectId))
+        {
+            return projectId;
+        }
+        return null;
+    }
+
+    public async Task SetSelectedProjectAsync(Guid projectId, string projectName)
+    {
+        await _localStorage.SetItemAsync("selectedProjectId", projectId.ToString());
+        await _localStorage.SetItemAsync("selectedProjectName", projectName);
+        OnProjectChanged?.Invoke();
+    }
+
+    public async Task<string?> GetSelectedProjectNameAsync()
+    {
+        return await _localStorage.GetItemAsync<string>("selectedProjectName");
+    }
+
+    public async Task ClearSelectedProjectAsync()
+    {
+        await _localStorage.RemoveItemAsync("selectedProjectId");
+        await _localStorage.RemoveItemAsync("selectedProjectName");
+        OnProjectChanged?.Invoke();
     }
 }
