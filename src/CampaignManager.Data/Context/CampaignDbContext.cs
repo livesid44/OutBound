@@ -125,7 +125,15 @@ public class CampaignDbContext : DbContext
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // Seed SuperAdmin user
+        // Seed data
+        SeedData(modelBuilder);
+    }
+
+    private static void SeedData(ModelBuilder modelBuilder)
+    {
+        var seedDate = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        // 1. Seed SuperAdmin user (no project required)
         var superAdminId = Guid.Parse("00000000-0000-0000-0000-000000000001");
         modelBuilder.Entity<User>().HasData(new User
         {
@@ -136,7 +144,222 @@ public class CampaignDbContext : DbContext
             LastName = "Admin",
             Role = UserRole.SuperAdmin,
             IsActive = true,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = seedDate
+        });
+
+        // 2. Seed a sample Project
+        var sampleProjectId = Guid.Parse("00000000-0000-0000-0000-000000000010");
+        modelBuilder.Entity<Project>().HasData(new Project
+        {
+            Id = sampleProjectId,
+            Name = "Demo Project",
+            Description = "A sample project for demonstration purposes",
+            IsActive = true,
+            CreatedAt = seedDate
+        });
+
+        // 3. Seed License for the sample project
+        var sampleLicenseId = Guid.Parse("00000000-0000-0000-0000-000000000011");
+        modelBuilder.Entity<License>().HasData(new License
+        {
+            Id = sampleLicenseId,
+            ProjectId = sampleProjectId,
+            LicenseKey = "DEMO-1234-5678-ABCD",
+            MaxUsers = 50,
+            MaxCampaigns = 10,
+            ExpiryDate = new DateTime(2025, 12, 31, 0, 0, 0, DateTimeKind.Utc),
+            IsActivated = true,
+            ActivatedAt = seedDate,
+            CreatedAt = seedDate
+        });
+
+        // 4. Seed SubAdmin for the sample project
+        var subAdminId = Guid.Parse("00000000-0000-0000-0000-000000000002");
+        modelBuilder.Entity<User>().HasData(new User
+        {
+            Id = subAdminId,
+            ProjectId = sampleProjectId,
+            Email = "subadmin@demo.local",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("SubAdmin@123"),
+            FirstName = "Sub",
+            LastName = "Admin",
+            Role = UserRole.SubAdmin,
+            IsActive = true,
+            CreatedAt = seedDate
+        });
+
+        // 5. Seed Supervisor for the sample project
+        var supervisorId = Guid.Parse("00000000-0000-0000-0000-000000000003");
+        modelBuilder.Entity<User>().HasData(new User
+        {
+            Id = supervisorId,
+            ProjectId = sampleProjectId,
+            Email = "supervisor@demo.local",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Supervisor@123"),
+            FirstName = "Demo",
+            LastName = "Supervisor",
+            Role = UserRole.Supervisor,
+            IsActive = true,
+            CreatedAt = seedDate
+        });
+
+        // 6. Seed Agent for the sample project (reports to supervisor)
+        var agentId = Guid.Parse("00000000-0000-0000-0000-000000000004");
+        modelBuilder.Entity<User>().HasData(new User
+        {
+            Id = agentId,
+            ProjectId = sampleProjectId,
+            Email = "agent@demo.local",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Agent@123"),
+            FirstName = "Demo",
+            LastName = "Agent",
+            Role = UserRole.Agent,
+            SupervisorId = supervisorId,
+            IsActive = true,
+            CreatedAt = seedDate
+        });
+
+        // 7. Seed sample dispositions for the project
+        var dispositionQualifiedId = Guid.Parse("00000000-0000-0000-0000-000000000020");
+        var dispositionNotInterestedId = Guid.Parse("00000000-0000-0000-0000-000000000021");
+        var dispositionCallbackId = Guid.Parse("00000000-0000-0000-0000-000000000022");
+        var dispositionNoAnswerId = Guid.Parse("00000000-0000-0000-0000-000000000023");
+
+        modelBuilder.Entity<Disposition>().HasData(
+            new Disposition
+            {
+                Id = dispositionQualifiedId,
+                ProjectId = sampleProjectId,
+                Code = "QUALIFIED",
+                Name = "Qualified Lead",
+                IsQualified = true,
+                RequiresCallback = false,
+                DisplayOrder = 1,
+                IsActive = true,
+                CreatedAt = seedDate
+            },
+            new Disposition
+            {
+                Id = dispositionNotInterestedId,
+                ProjectId = sampleProjectId,
+                Code = "NOT_INTERESTED",
+                Name = "Not Interested",
+                IsQualified = false,
+                RequiresCallback = false,
+                DisplayOrder = 2,
+                IsActive = true,
+                CreatedAt = seedDate
+            },
+            new Disposition
+            {
+                Id = dispositionCallbackId,
+                ProjectId = sampleProjectId,
+                Code = "CALLBACK",
+                Name = "Callback Required",
+                IsQualified = false,
+                RequiresCallback = true,
+                DisplayOrder = 3,
+                IsActive = true,
+                CreatedAt = seedDate
+            },
+            new Disposition
+            {
+                Id = dispositionNoAnswerId,
+                ProjectId = sampleProjectId,
+                Code = "NO_ANSWER",
+                Name = "No Answer",
+                IsQualified = false,
+                RequiresCallback = true,
+                DisplayOrder = 4,
+                IsActive = true,
+                CreatedAt = seedDate
+            }
+        );
+
+        // 8. Seed a sample Campaign
+        var sampleCampaignId = Guid.Parse("00000000-0000-0000-0000-000000000030");
+        modelBuilder.Entity<Campaign>().HasData(new Campaign
+        {
+            Id = sampleCampaignId,
+            ProjectId = sampleProjectId,
+            Name = "Demo Email Campaign",
+            Description = "A sample email campaign for demonstration",
+            Channel = ChannelType.Email,
+            Status = CampaignStatus.Draft,
+            SchedulerEnabled = false,
+            CreatedById = subAdminId,
+            CreatedAt = seedDate
+        });
+
+        // 9. Seed campaign fields
+        modelBuilder.Entity<CampaignField>().HasData(
+            new CampaignField
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000040"),
+                CampaignId = sampleCampaignId,
+                FieldName = "firstName",
+                DisplayName = "First Name",
+                FieldType = FieldType.String,
+                IsRequired = true,
+                DisplayOrder = 1,
+                CreatedAt = seedDate
+            },
+            new CampaignField
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000041"),
+                CampaignId = sampleCampaignId,
+                FieldName = "lastName",
+                DisplayName = "Last Name",
+                FieldType = FieldType.String,
+                IsRequired = true,
+                DisplayOrder = 2,
+                CreatedAt = seedDate
+            },
+            new CampaignField
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000042"),
+                CampaignId = sampleCampaignId,
+                FieldName = "email",
+                DisplayName = "Email Address",
+                FieldType = FieldType.Email,
+                IsRequired = true,
+                DisplayOrder = 3,
+                CreatedAt = seedDate
+            },
+            new CampaignField
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000043"),
+                CampaignId = sampleCampaignId,
+                FieldName = "phone",
+                DisplayName = "Phone Number",
+                FieldType = FieldType.Phone,
+                IsRequired = false,
+                DisplayOrder = 4,
+                CreatedAt = seedDate
+            }
+        );
+
+        // 10. Seed campaign API config
+        modelBuilder.Entity<CampaignApiConfig>().HasData(new CampaignApiConfig
+        {
+            Id = Guid.Parse("00000000-0000-0000-0000-000000000050"),
+            CampaignId = sampleCampaignId,
+            SendGridFromEmail = "noreply@demo.local",
+            SendGridFromName = "Demo Campaign",
+            CreatedAt = seedDate
+        });
+
+        // 11. Seed campaign strategy
+        modelBuilder.Entity<CampaignStrategy>().HasData(new CampaignStrategy
+        {
+            Id = Guid.Parse("00000000-0000-0000-0000-000000000051"),
+            CampaignId = sampleCampaignId,
+            MaxEmailAttempts = 3,
+            MaxCallAttempts = 5,
+            EmailRetryIntervalMinutes = 1440, // 24 hours
+            CallRetryIntervalMinutes = 60,
+            WorkingDays = "Mon,Tue,Wed,Thu,Fri",
+            CreatedAt = seedDate
         });
     }
 }
