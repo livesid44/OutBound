@@ -230,7 +230,7 @@ public class LeadService : ILeadService
             CampaignId = campaignId,
             EmailQueueCount = leads.Count(l => l.Status == LeadStatus.EmailPending),
             VoiceQueueCount = leads.Count(l => l.Status == LeadStatus.CallPending),
-            LastProcessedAt = leads.Max(l => l.UpdatedAt),
+            LastProcessedAt = leads.Any() ? leads.Max(l => l.UpdatedAt) : null,
             NextScheduledAt = campaign?.SchedulerEnabled == true ? DateTime.UtcNow.AddMinutes(5) : null,
             LastUpdated = DateTime.UtcNow
         };

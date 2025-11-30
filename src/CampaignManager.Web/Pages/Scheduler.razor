@@ -1,6 +1,7 @@
 @page "/scheduler"
 @attribute [Authorize(Roles = "SuperAdmin,SubAdmin,Supervisor")]
 @inject IApiService ApiService
+@implements IDisposable
 @using System.Timers
 
 <PageTitle>Scheduler & Monitor - Campaign Manager</PageTitle>
@@ -231,12 +232,14 @@ else
         await LoadData();
     }
 
+    private const int AutoRefreshIntervalMs = 30000; // 30 seconds
+
     private void ToggleAutoRefresh()
     {
         autoRefresh = !autoRefresh;
         if (autoRefresh)
         {
-            refreshTimer = new Timer(30000); // 30 seconds
+            refreshTimer = new Timer(AutoRefreshIntervalMs);
             refreshTimer.Elapsed += async (sender, e) => await InvokeAsync(async () =>
             {
                 await LoadData();

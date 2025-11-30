@@ -414,12 +414,21 @@ else if (campaign != null)
     private string GetPreviewHtml()
     {
         var html = apiConfig.EmailTemplateHtml ?? "";
+        
+        // Basic HTML sanitization - remove script tags and event handlers
+        // Note: This is a preview for the template designer (admin users only)
+        // For production email sending, proper sanitization should be done server-side
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"<script[^>]*>[\s\S]*?</script>", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\s*on\w+\s*=\s*""[^""]*""", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        html = System.Text.RegularExpressions.Regex.Replace(html, @"\s*on\w+\s*=\s*'[^']*'", "", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        
         // Replace field placeholders with sample values for preview
         if (campaign?.Fields != null)
         {
             foreach (var field in campaign.Fields)
             {
-                html = html.Replace("{{" + field.FieldName + "}}", $"<span class='badge bg-info'>[{field.DisplayName}]</span>");
+                var safeDisplayName = System.Net.WebUtility.HtmlEncode(field.DisplayName ?? field.FieldName);
+                html = html.Replace("{{" + field.FieldName + "}}", $"<span class='badge bg-info'>[{safeDisplayName}]</span>");
             }
         }
         return html;
