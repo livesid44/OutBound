@@ -2,97 +2,175 @@
 @attribute [Authorize]
 @inject IApiService ApiService
 
-<PageTitle>Dashboard - Campaign Manager</PageTitle>
+<PageTitle>Dashboard - Protonect Campaign Manager</PageTitle>
 
-<h1>Dashboard</h1>
+<div class="container">
+    <section>
+        <div class="row pb-4">
+            <div class="col-lg-6">
+                <h3 class="sub-heading22">Campaign Dashboard</h3>
+            </div>
+            <div class="col-lg-6 d-flex justify-content-end">
+                <button class="btn btn-primary" @onclick="RefreshDashboard">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 15 15" fill="none">
+                        <path d="M7.5 1.25C4.05 1.25 1.25 4.05 1.25 7.5C1.25 10.95 4.05 13.75 7.5 13.75C10.95 13.75 13.75 10.95 13.75 7.5" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                    &nbsp; Refresh
+                </button>
+            </div>
+        </div>
 
-<AuthorizeView>
-    <Authorized>
         @if (isLoading)
         {
-            <div class="d-flex justify-content-center">
-                <div class="spinner-border" role="status">
+            <div class="d-flex justify-content-center py-5">
+                <div class="spinner-border text-primary" role="status">
                     <span class="visually-hidden">Loading...</span>
                 </div>
             </div>
         }
         else if (summary != null)
         {
-            <div class="row mb-4">
-                <div class="col-md-3">
-                    <div class="card bg-primary text-white">
-                        <div class="card-body">
-                            <h5 class="card-title">Total Campaigns</h5>
-                            <h2>@summary.TotalCampaigns</h2>
-                        </div>
+            <div class="row">
+                <div class="col-lg-3">
+                    <div class="db_cards">
+                        <a>
+                            <img src="images/campaign.svg" alt="" width="24">&nbsp;
+                            <span class="grid_text">Total Campaigns</span>
+                            <h5 class="mt-3">@summary.TotalCampaigns</h5>
+                        </a>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card bg-success text-white">
-                        <div class="card-body">
-                            <h5 class="card-title">Active Campaigns</h5>
-                            <h2>@summary.ActiveCampaigns</h2>
-                        </div>
+                <div class="col-lg-3">
+                    <div class="db_cards">
+                        <a>
+                            <img src="images/avg_login.svg" alt="" width="24">&nbsp;
+                            <span class="grid_text">Active Campaigns</span>
+                            <h5 class="mt-3">@summary.ActiveCampaigns</h5>
+                        </a>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card bg-info text-white">
-                        <div class="card-body">
-                            <h5 class="card-title">Total Leads</h5>
-                            <h2>@summary.TotalLeads</h2>
-                        </div>
+                <div class="col-lg-3">
+                    <div class="db_cards">
+                        <a>
+                            <img src="images/agent.svg" alt="" width="24">&nbsp;
+                            <span class="grid_text">Total Leads</span>
+                            <h5 class="mt-3">@summary.TotalLeads</h5>
+                        </a>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card bg-warning">
-                        <div class="card-body">
-                            <h5 class="card-title">Pending Leads</h5>
-                            <h2>@summary.PendingLeads</h2>
-                        </div>
+                <div class="col-lg-3">
+                    <div class="db_cards">
+                        <a>
+                            <img src="images/avg_notready.svg" alt="" width="24">&nbsp;
+                            <span class="grid_text">Pending Leads</span>
+                            <h5 class="mt-3">@summary.PendingLeads</h5>
+                        </a>
                     </div>
                 </div>
             </div>
 
-            <h3>Campaign Performance</h3>
-            <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Campaign</th>
-                            <th>Total</th>
-                            <th>Queued</th>
-                            <th>Email Sent</th>
-                            <th>Dialed</th>
-                            <th>Connected</th>
-                            <th>Disposed</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var campaign in summary.CampaignStats)
-                        {
-                            <tr>
-                                <td>@campaign.CampaignName</td>
-                                <td>@campaign.TotalLeads</td>
-                                <td>@campaign.QueuedCount</td>
-                                <td>@campaign.EmailSentCount</td>
-                                <td>@campaign.DialedCount</td>
-                                <td>@campaign.ConnectedCount</td>
-                                <td>@campaign.DisposedCount</td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+            <div class="row mt-4">
+                <div class="col-lg-3">
+                    <div class="db_cards">
+                        <a>
+                            <img src="images/avg_talk_time.svg" alt="" width="24">&nbsp;
+                            <span class="grid_text">Emails Sent</span>
+                            <h5 class="mt-3">@(summary.CampaignStats?.Sum(c => c.EmailSentCount) ?? 0)</h5>
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-3">
+                    <div class="db_cards">
+                        <a>
+                            <img src="images/avg_staff.png" alt="" width="24">&nbsp;
+                            <span class="grid_text">Calls Dialed</span>
+                            <h5 class="mt-3">@(summary.CampaignStats?.Sum(c => c.DialedCount) ?? 0)</h5>
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-3">
+                    <div class="db_cards">
+                        <a>
+                            <img src="images/avg_login.svg" alt="" width="24">&nbsp;
+                            <span class="grid_text">Connected</span>
+                            <h5 class="mt-3">@(summary.CampaignStats?.Sum(c => c.ConnectedCount) ?? 0)</h5>
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-3">
+                    <div class="db_cards">
+                        <a>
+                            <img src="images/report.svg" alt="" width="24">&nbsp;
+                            <span class="grid_text">Disposed</span>
+                            <h5 class="mt-3">@(summary.CampaignStats?.Sum(c => c.DisposedCount) ?? 0)</h5>
+                        </a>
+                    </div>
+                </div>
             </div>
+
+            <section>
+                <div class="row py-5">
+                    <div class="d-flex align-items-center gap-3 col-lg-12">
+                        <h5 class="fw-bold mb-0">Campaign Performance</h5>
+                        <div class="flex-grow-1 border-bottom"></div>
+                    </div>
+                </div>
+
+                <div class="main-sec">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Campaign</th>
+                                    <th class="text-center">Total</th>
+                                    <th class="text-center">Queued</th>
+                                    <th class="text-center">Email Sent</th>
+                                    <th class="text-center">Dialed</th>
+                                    <th class="text-center">Connected</th>
+                                    <th class="text-center">Disposed</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (summary.CampaignStats != null && summary.CampaignStats.Any())
+                                {
+                                    @foreach (var campaign in summary.CampaignStats)
+                                    {
+                                        <tr>
+                                            <td class="fw-semibold">@campaign.CampaignName</td>
+                                            <td class="text-center">@campaign.TotalLeads</td>
+                                            <td class="text-center">@campaign.QueuedCount</td>
+                                            <td class="text-center">@campaign.EmailSentCount</td>
+                                            <td class="text-center">@campaign.DialedCount</td>
+                                            <td class="text-center">@campaign.ConnectedCount</td>
+                                            <td class="text-center">@campaign.DisposedCount</td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="7" class="text-center secondarytextcolor">No campaign data available</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
         }
         else
         {
-            <div class="alert alert-info">
-                <p>Welcome to Campaign Manager!</p>
-                <p>Start by creating a campaign or uploading data.</p>
+            <div class="main-sec">
+                <div class="text-center py-5">
+                    <img src="images/campaign.svg" alt="No campaigns" width="64" class="mb-3 opacity-50">
+                    <h5>Welcome to Protonect Campaign Manager!</h5>
+                    <p class="secondarytextcolor">Start by creating a campaign or uploading data.</p>
+                    <a href="campaigns" class="btn btn-primary mt-3">Create Campaign</a>
+                </div>
             </div>
         }
-    </Authorized>
-</AuthorizeView>
+    </section>
+</div>
 
 @code {
     private DashboardSummaryDto? summary;
@@ -100,17 +178,28 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadDashboard();
+    }
+
+    private async Task LoadDashboard()
+    {
+        isLoading = true;
         try
         {
             summary = await ApiService.GetAsync<DashboardSummaryDto>("dashboard/summary");
         }
         catch
         {
-            // Handle error
+            // Handle error - show empty state
         }
         finally
         {
             isLoading = false;
         }
+    }
+
+    private async Task RefreshDashboard()
+    {
+        await LoadDashboard();
     }
 }

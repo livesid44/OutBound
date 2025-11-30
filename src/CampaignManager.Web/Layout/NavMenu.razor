@@ -1,87 +1,107 @@
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">Campaign Manager</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-    </div>
-</div>
+<ul class="menu">
+    <AuthorizeView Roles="SuperAdmin,SubAdmin,Supervisor,Agent">
+        <li>
+            <NavLink class="sb_nav_item" href="" Match="NavLinkMatch.All">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M19.0408 6.40002L18.3167 5.83335H18.3342V1.66669H16.6675V4.54252L11.5408 0.530852C10.6342 -0.179148 9.36667 -0.179148 8.46 0.530852L0.959167 6.40002C0.35 6.87669 0 7.59502 0 8.36919V20H7.5V12.5C7.5 12.0409 7.87333 11.6667 8.33333 11.6667H11.6667C12.1267 11.6667 12.5 12.0409 12.5 12.5V20H20V8.36919C20 7.59502 19.65 6.87669 19.0408 6.40002Z" />
+                </svg>
+                <span>Dashboard</span>
+            </NavLink>
+        </li>
+    </AuthorizeView>
 
-<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
-    <nav class="flex-column">
-        <AuthorizeView Roles="SuperAdmin,SubAdmin,Supervisor,Agent">
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                    <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Dashboard
-                </NavLink>
-            </div>
-        </AuthorizeView>
+    <AuthorizeView Roles="SuperAdmin">
+        <li>
+            <NavLink class="sb_nav_item" href="projects">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M17.5 2.5H2.5C1.12167 2.5 0 3.62167 0 5V15C0 16.3783 1.12167 17.5 2.5 17.5H17.5C18.8783 17.5 20 16.3783 20 15V5C20 3.62167 18.8783 2.5 17.5 2.5ZM2.5 4.16667H17.5C17.9583 4.16667 18.3333 4.54167 18.3333 5V6.66667H1.66667V5C1.66667 4.54167 2.04167 4.16667 2.5 4.16667ZM17.5 15.8333H2.5C2.04167 15.8333 1.66667 15.4583 1.66667 15V8.33333H18.3333V15C18.3333 15.4583 17.9583 15.8333 17.5 15.8333Z" />
+                </svg>
+                <span>Projects</span>
+            </NavLink>
+        </li>
+    </AuthorizeView>
 
-        <AuthorizeView Roles="SuperAdmin">
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="projects">
-                    <span class="bi bi-building-nav-menu" aria-hidden="true"></span> Projects
-                </NavLink>
-            </div>
-        </AuthorizeView>
+    <AuthorizeView Roles="SuperAdmin,SubAdmin">
+        <li>
+            <NavLink class="sb_nav_item" href="users">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M17.5 17.9167V20H15.8333V17.9167C15.8333 16.7675 14.8991 15.8333 13.75 15.8333H6.24997C5.10164 15.8333 4.16664 16.7675 4.16664 17.9167V20H2.49997V17.9167C2.49997 15.8492 4.18247 14.1667 6.24997 14.1667H13.75C15.8175 14.1667 17.5 15.8492 17.5 17.9167ZM10 0C7.24 0 5 2.24 5 5C5 7.76 7.24 10 10 10C12.76 10 15 7.76 15 5C15 2.24 12.76 0 10 0Z" />
+                </svg>
+                <span>Users</span>
+            </NavLink>
+        </li>
+    </AuthorizeView>
 
-        <AuthorizeView Roles="SuperAdmin,SubAdmin">
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="users">
-                    <span class="bi bi-people-nav-menu" aria-hidden="true"></span> Users
-                </NavLink>
-            </div>
-        </AuthorizeView>
+    <AuthorizeView Roles="SuperAdmin,SubAdmin,Supervisor">
+        <li>
+            <NavLink class="sb_nav_item" href="campaigns">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M8.15 16.8225C8.4475 17.4883 8.38333 18.3033 7.95917 18.9575C7.53417 19.6108 6.81583 20.0008 6.03667 20.0008H4.83333L2.70583 14.1675H7.15333L8.14917 16.8233L8.15 16.8225ZM5.83333 3.33333H2.5C1.12167 3.33333 0 4.455 0 5.83333V10C0 11.3783 1.12167 12.5 2.5 12.5H5.83333V3.33333ZM18.3333 5.875V0H16.6667C16.6667 2.27417 13.435 3.33333 11.25 3.33333H7.5V12.5H11.25C13.435 12.5 16.6667 13.5592 16.6667 15.8333H18.3333V9.95833C19.2842 9.765 20 8.925 20 7.91667C20 6.90833 19.2842 6.06833 18.3333 5.875Z" />
+                </svg>
+                <span>Manage Campaign</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M9.63328 8.00001L4.73328 12.9C4.56662 13.0667 4.48606 13.2611 4.49162 13.4833C4.49717 13.7056 4.58328 13.9 4.74995 14.0667C4.91662 14.2333 5.11106 14.3167 5.33328 14.3167C5.55551 14.3167 5.74995 14.2333 5.91662 14.0667L11.05 8.95001C11.1833 8.81668 11.2833 8.66668 11.35 8.50001C11.4166 8.33335 11.45 8.16668 11.45 8.00001C11.45 7.83335 11.4166 7.66668 11.35 7.50001C11.2833 7.33335 11.1833 7.18335 11.05 7.05001L5.91662 1.91668C5.74995 1.75001 5.55273 1.66946 5.32495 1.67501C5.09717 1.68057 4.89995 1.76668 4.73328 1.93335C4.56662 2.10001 4.48328 2.29446 4.48328 2.51668C4.48328 2.7389 4.56662 2.93335 4.73328 3.10001L9.63328 8.00001Z" />
+                </svg>
+            </NavLink>
+        </li>
+    </AuthorizeView>
 
-        <AuthorizeView Roles="SuperAdmin,SubAdmin,Supervisor">
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="campaigns">
-                    <span class="bi bi-megaphone-nav-menu" aria-hidden="true"></span> Campaigns
-                </NavLink>
-            </div>
-        </AuthorizeView>
+    <AuthorizeView Roles="SuperAdmin,SubAdmin,Supervisor">
+        <li>
+            <NavLink class="sb_nav_item" href="scheduler">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M17.5 2.5H16.6667V0.833333C16.6667 0.373333 16.2933 0 15.8333 0C15.3733 0 15 0.373333 15 0.833333V2.5H5V0.833333C5 0.373333 4.62667 0 4.16667 0C3.70667 0 3.33333 0.373333 3.33333 0.833333V2.5H2.5C1.12167 2.5 0 3.62167 0 5V17.5C0 18.8783 1.12167 20 2.5 20H17.5C18.8783 20 20 18.8783 20 17.5V5C20 3.62167 18.8783 2.5 17.5 2.5ZM18.3333 17.5C18.3333 17.9583 17.9583 18.3333 17.5 18.3333H2.5C2.04167 18.3333 1.66667 17.9583 1.66667 17.5V8.33333H18.3333V17.5Z" />
+                </svg>
+                <span>Scheduler</span>
+            </NavLink>
+        </li>
+    </AuthorizeView>
 
-        <AuthorizeView Roles="SuperAdmin,SubAdmin,Supervisor">
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="scheduler">
-                    <span class="bi bi-calendar-nav-menu" aria-hidden="true"></span> Scheduler
-                </NavLink>
-            </div>
-        </AuthorizeView>
+    <AuthorizeView Roles="SuperAdmin,SubAdmin,Supervisor">
+        <li>
+            <NavLink class="sb_nav_item" href="reports">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M1.66667 2.5C1.66667 2.04083 2.04 1.66667 2.5 1.66667H9.16667V7.5H15V9.16667H16.6667V6.32167L10.345 0H2.5C1.12167 0 0 1.12167 0 2.5V20H10.8333V18.3333H1.66667V2.5ZM10.8333 2.845L13.8217 5.83333H10.8333V2.845ZM4.16667 16.6667V13.3333H5.83333V16.6667H4.16667ZM7.5 16.6667V9.16667H9.16667V16.6667H7.5ZM16.25 10.8333C14.0417 10.8333 12.5 11.3475 12.5 12.0833V18.1942C12.5 19.3417 13.8675 20 16.25 20C18.6325 20 20 19.3417 20 18.1942V12.0833C20 11.3475 18.4583 10.8333 16.25 10.8333Z" />
+                </svg>
+                <span>Report & Dashboard</span>
+            </NavLink>
+        </li>
+    </AuthorizeView>
 
-        <AuthorizeView Roles="SuperAdmin,SubAdmin,Supervisor">
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="reports">
-                    <span class="bi bi-bar-chart-nav-menu" aria-hidden="true"></span> Reports
-                </NavLink>
-            </div>
-        </AuthorizeView>
+    <AuthorizeView Roles="SuperAdmin,SubAdmin,Supervisor">
+        <li>
+            <NavLink class="sb_nav_item" href="data-upload">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M11.6667 8.33331C11.6667 9.18248 11.41 9.96998 10.9733 10.6283L8.5775 8.23248C8.42083 8.07581 8.33333 7.86415 8.33333 7.64331V4.25081C10.235 4.63665 11.6667 6.31748 11.6667 8.33331ZM6.66667 7.98831V4.25081C4.54167 4.68248 3.00333 6.73081 3.39417 9.05665C3.665 10.6683 4.91083 12.0091 6.50167 12.3833C7.72667 12.6708 8.885 12.4108 9.795 11.8075L7.15417 9.16665C6.84167 8.85415 6.66667 8.42998 6.66667 7.98831ZM15.8333 4.16665H14.1667C13.7058 4.16665 13.3333 4.53998 13.3333 4.99998C13.3333 5.45998 13.7058 5.83331 14.1667 5.83331H15.8333C16.2942 5.83331 16.6667 5.45998 16.6667 4.99998C16.6667 4.53998 16.2942 4.16665 15.8333 4.16665ZM20 4.99998V11.6666C20 13.9641 18.1308 15.8333 15.8333 15.8333H10.8333V17.5H14.1667C14.6275 17.5 15 17.8733 15 18.3333C15 18.7933 14.6275 19.1666 14.1667 19.1666H5.83333C5.3725 19.1666 5 18.7933 5 18.3333C5 17.8733 5.3725 17.5 5.83333 17.5H9.16667V15.8333H4.16667C1.86917 15.8333 0 13.9641 0 11.6666V4.99998C0 2.70248 1.86917 0.833313 4.16667 0.833313H15.8333C18.1308 0.833313 20 2.70248 20 4.99998Z" />
+                </svg>
+                <span>Manage Data</span>
+            </NavLink>
+        </li>
+    </AuthorizeView>
 
-        <AuthorizeView Roles="Agent">
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="agent">
-                    <span class="bi bi-headset-nav-menu" aria-hidden="true"></span> Agent UI
-                </NavLink>
-            </div>
-        </AuthorizeView>
+    <AuthorizeView Roles="Agent">
+        <li>
+            <NavLink class="sb_nav_item" href="agent">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M17.5 17.9167V20H15.8333V17.9167C15.8333 16.7675 14.8991 15.8333 13.75 15.8333H6.24997C5.10164 15.8333 4.16664 16.7675 4.16664 17.9167V20H2.49997V17.9167C2.49997 15.8492 4.18247 14.1667 6.24997 14.1667H13.75C15.8175 14.1667 17.5 15.8492 17.5 17.9167ZM10.6866 5.07915C11.7325 5.31999 12.585 6.16582 12.8325 7.20999C13 7.91582 12.9083 8.59249 12.6341 9.16665H13.7225C14.14 9.16665 14.505 8.85999 14.5533 8.44499C14.61 7.95582 14.5891 7.44332 14.4775 6.91915C14.1075 5.18665 12.7016 3.78915 10.9666 3.43249C8.01914 2.82665 5.41747 5.07415 5.41747 7.91665C5.41747 9.14082 5.89997 10.2542 6.68414 11.0767C6.71747 10.37 6.97247 9.72082 7.3808 9.19665C7.1908 8.80999 7.08414 8.37499 7.08414 7.91582C7.08414 6.08332 8.78247 4.63999 10.6875 5.07832L10.6866 5.07915Z" />
+                </svg>
+                <span>Agent UI</span>
+            </NavLink>
+        </li>
+    </AuthorizeView>
 
-        <AuthorizeView Roles="Supervisor">
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="supervisor">
-                    <span class="bi bi-person-badge-nav-menu" aria-hidden="true"></span> Supervisor
-                </NavLink>
-            </div>
-        </AuthorizeView>
-    </nav>
-</div>
+    <AuthorizeView Roles="Supervisor">
+        <li>
+            <NavLink class="sb_nav_item" href="supervisor">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M17.5 17.9167V20H15.8333V17.9167C15.8333 16.7675 14.8991 15.8333 13.75 15.8333H6.24997C5.10164 15.8333 4.16664 16.7675 4.16664 17.9167V20H2.49997V17.9167C2.49997 15.8492 4.18247 14.1667 6.24997 14.1667H13.75C15.8175 14.1667 17.5 15.8492 17.5 17.9167ZM10 0C7.24 0 5 2.24 5 5C5 7.76 7.24 10 10 10C12.76 10 15 7.76 15 5C15 2.24 12.76 0 10 0Z" />
+                </svg>
+                <span>Supervisor Dashboard</span>
+            </NavLink>
+        </li>
+    </AuthorizeView>
+</ul>
 
 @code {
-    private bool collapseNavMenu = true;
-
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
-
-    private void ToggleNavMenu()
-    {
-        collapseNavMenu = !collapseNavMenu;
-    }
+    // Navigation menu doesn't need toggle functionality in new design
 }
