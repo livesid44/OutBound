@@ -146,13 +146,20 @@ public class CampaignDbContext : DbContext
     {
         var seedDate = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
+        // Pre-computed BCrypt hashes for seed data (prevents hash regeneration on each startup)
+        // These are static values - the original passwords are documented in README.md and SETUP.md
+        const string adminPasswordHash = "$2a$11$WCDqnEksHWQsG7Za1KfMue9sOUHGRPWPV3GKL93AYQcJzIn8oU7ui"; // Admin@123
+        const string subAdminPasswordHash = "$2a$11$wbeagR.onmQYakqSy5tEqO4z6U.E4JCFqndvYL.6OG5hNj6xsKcfi"; // SubAdmin@123
+        const string supervisorPasswordHash = "$2a$11$pDgWTkRfzZfrKuxJila8u.X6fzxr1K.PFbdkgQrEl5vGHqovzlr1e"; // Supervisor@123
+        const string agentPasswordHash = "$2a$11$CTCCNGRvH2t2mMI7eW0KCOm0w7RUq3mm/6WTulJ22y0NBz38mlez6"; // Agent@123
+
         // 1. Seed SuperAdmin user (no project required)
         var superAdminId = Guid.Parse("00000000-0000-0000-0000-000000000001");
         modelBuilder.Entity<User>().HasData(new User
         {
             Id = superAdminId,
             Email = "admin@campaignmanager.local",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
+            PasswordHash = adminPasswordHash,
             FirstName = "Super",
             LastName = "Admin",
             Role = UserRole.SuperAdmin,
@@ -193,7 +200,7 @@ public class CampaignDbContext : DbContext
             Id = subAdminId,
             ProjectId = sampleProjectId,
             Email = "subadmin@demo.local",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("SubAdmin@123"),
+            PasswordHash = subAdminPasswordHash,
             FirstName = "Sub",
             LastName = "Admin",
             Role = UserRole.SubAdmin,
@@ -208,7 +215,7 @@ public class CampaignDbContext : DbContext
             Id = supervisorId,
             ProjectId = sampleProjectId,
             Email = "supervisor@demo.local",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Supervisor@123"),
+            PasswordHash = supervisorPasswordHash,
             FirstName = "Demo",
             LastName = "Supervisor",
             Role = UserRole.Supervisor,
@@ -223,7 +230,7 @@ public class CampaignDbContext : DbContext
             Id = agentId,
             ProjectId = sampleProjectId,
             Email = "agent@demo.local",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Agent@123"),
+            PasswordHash = agentPasswordHash,
             FirstName = "Demo",
             LastName = "Agent",
             Role = UserRole.Agent,
