@@ -6,9 +6,11 @@ publish/
 *.vs/
 .vscode/
 logs/
+Logs/
 *.db
 *.sqlite
 secrets.json
+*.txt
 
 # Keep appsettings for the new projects but ignore sensitive ones
 src/CampaignManager.Api/appsettings.Development.json

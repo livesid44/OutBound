@@ -7,9 +7,13 @@ This is a standalone .NET console application designed to process pending Siebel
 ## Features
 
 - **Async/Await Processing**: All database and API operations are asynchronous
-- **Parallel Processing**: Configurable degree of parallelism to handle multiple leads simultaneously
+- **High-Volume Parallel Processing**: Configurable degree of parallelism (default: 20) to handle large volumes (9000+ records) efficiently
+- **Complete Processing Guarantee**: Ensures all records are processed with detailed tracking and verification
+- **File Logging**: Automatic logging to text files in the Logs directory with daily rotation
+- **Comprehensive Tracking**: Progress tracking for each lead with counts (e.g., "Processing 1532/9000")
 - **Error Handling**: Comprehensive error handling with detailed logging
 - **Status Tracking**: Updates database with success/failure status for each lead
+- **Performance Metrics**: Duration tracking and average time per lead calculation
 - **Configurable**: All settings managed through `appsettings.json`
 
 ## Architecture
@@ -47,10 +51,12 @@ This is a standalone .NET console application designed to process pending Siebel
     "TimeoutSeconds": 30
   },
   "Processing": {
-    "MaxDegreeOfParallelism": 5,
+    "MaxDegreeOfParallelism": 20,
     "BatchSize": 100
   },
   "Logging": {
+    "LogFilePath": "Logs/SiebelLeadBackup_{Date}.txt",
+    "EnableFileLogging": true,
     "LogLevel": {
       "Default": "Information",
       "Microsoft": "Warning",
@@ -73,8 +79,17 @@ This is a standalone .NET console application designed to process pending Siebel
 - **TimeoutSeconds**: HTTP request timeout in seconds (default: 30)
 
 #### Processing
-- **MaxDegreeOfParallelism**: Maximum number of concurrent lead processing operations (default: 5)
+- **MaxDegreeOfParallelism**: Maximum number of concurrent lead processing operations (default: 20)
+  - Set higher (20-30) for processing large volumes (e.g., 9000 records)
+  - Adjust based on server capacity and network bandwidth
 - **BatchSize**: Reserved for future batch processing enhancements (default: 100)
+
+#### Logging
+- **LogFilePath**: Path to the log file with {Date} placeholder (default: "Logs/SiebelLeadBackup_{Date}.txt")
+  - {Date} is automatically replaced with current date in yyyy-MM-dd format
+  - Creates daily log files (e.g., SiebelLeadBackup_2025-12-15.txt)
+- **EnableFileLogging**: Enable/disable file logging (default: true)
+- **LogLevel**: Configure logging verbosity for different components
 
 ## Database Requirements
 
@@ -270,32 +285,56 @@ You can configure this console application to run as:
 
 ## Logging
 
-The application uses Microsoft.Extensions.Logging with console output.
+The application uses Microsoft.Extensions.Logging with dual output:
+1. **Console Output**: Real-time progress display
+2. **File Output**: Persistent logs saved to text files in the `Logs` directory
+
+**Log File Location:**
+- Default: `Logs/SiebelLeadBackup_YYYY-MM-DD.txt`
+- Daily rotation: New file created each day
+- Example: `Logs/SiebelLeadBackup_2025-12-15.txt`
 
 **Log Levels:**
-- **Information**: General flow of the application
+- **Information**: General flow of the application, progress tracking
 - **Warning**: Abnormal or unexpected events (e.g., API failures)
 - **Error**: Errors and exceptions
 - **Debug**: Detailed diagnostic information (HTTP requests/responses)
+
+**Enhanced Features:**
+- **Progress Tracking**: Shows current/total for each lead (e.g., "Processing 1532/9000")
+- **Completion Verification**: Warns if not all records were processed
+- **Performance Metrics**: Duration and average time per lead
+- **Detailed Status**: Success/failure for each individual lead
 
 **Sample Output:**
 ```
 === Siebel Lead Backup Processing Application ===
 Starting at: 12/15/2025 10:30:00 AM
-Max Parallelism: 5
+Max Parallelism: 20
 
-info: SiebelLeadBackup.Console.Services.DatabaseService[0]
-      Retrieved 50 pending leads from database
-info: SiebelLeadBackup.Console.Services.LeadProcessingService[0]
-      Processing 50 leads with max parallelism of 5
-info: SiebelLeadBackup.Console.Services.SiebelApiService[0]
-      Successfully sent lead data for InteractionId: 12345
-info: SiebelLeadBackup.Console.Services.DatabaseService[0]
-      Updated lead status for InteractionId: 12345
-info: SiebelLeadBackup.Console.Services.LeadProcessingService[0]
-      Lead processing completed. Success: 48, Failed: 2
+info: === Starting lead processing ===
+info: Timestamp: 12/15/2025 10:30:01 AM
+info: Retrieved 9000 pending leads from database
+info: Processing with max parallelism of 20
+info: Expected to process all 9000 records
 
-Completed at: 12/15/2025 10:31:15 AM
+info: Processing lead 1/9000 - InteractionId: 12345
+info: Lead 12345 processed successfully (1/9000)
+info: Processing lead 2/9000 - InteractionId: 12346
+info: Lead 12346 processed successfully (2/9000)
+...
+info: Processing lead 9000/9000 - InteractionId: 21344
+info: Lead 21344 processed successfully (9000/9000)
+
+info: === Lead processing completed ===
+info: Total leads retrieved: 9000
+info: Total leads processed: 9000
+info: Successfully processed: 8950
+info: Failed to process: 50
+info: Processing duration: 00:15:30
+info: Average time per lead: 103.33 ms
+
+Completed at: 12/15/2025 10:45:31 AM
 Press any key to exit...
 ```
 
@@ -304,22 +343,41 @@ Press any key to exit...
 ### Parallelism
 
 The `MaxDegreeOfParallelism` setting controls how many leads are processed simultaneously:
-- **Lower values (1-3)**: More conservative, suitable for limited resources or API rate limits
-- **Medium values (4-8)**: Balanced performance and resource usage
-- **Higher values (9+)**: Maximum throughput, requires adequate resources
+- **Low volume (<500 records)**: 5-10 concurrent operations
+- **Medium volume (500-3000 records)**: 10-15 concurrent operations
+- **High volume (3000-10000+ records)**: 20-30 concurrent operations (default: 20)
+
+**Optimized for Large Volumes:**
+- Default setting of 20 is designed to efficiently handle 9000+ records
+- Ensures all records are processed completely
+- Provides detailed progress tracking (e.g., "Processing 5432/9000")
 
 **Recommendations:**
-- Start with 5 and adjust based on:
-  - Database server capacity
-  - API server capacity and rate limits
-  - Network bandwidth
-  - Available CPU cores
+- Current default (20) is optimized for high-volume processing
+- Increase to 25-30 for even faster processing if:
+  - Database server has high capacity
+  - API server can handle higher concurrent requests
+  - Network bandwidth is sufficient
+  - Server has 8+ CPU cores
+- Decrease to 10-15 if experiencing:
+  - API rate limiting
+  - Database connection pool exhaustion
+  - Memory pressure
+
+### Processing Guarantee
+
+- **Complete Loop Execution**: Application processes all retrieved records
+- **Progress Verification**: Logs warn if processed count doesn't match total count
+- **Individual Tracking**: Each lead is tracked with InteractionId and position (current/total)
+- **Performance Metrics**: Reports total duration and average time per lead
 
 ### Error Handling
 
 - Individual lead failures do not stop the entire batch
-- Failed leads are logged and their status is updated in the database
+- Failed leads are logged with detailed error messages
+- Database status is updated for both successful and failed leads
 - The application continues processing remaining leads even if some fail
+- Summary report shows exact success/failure counts
 
 ## Troubleshooting
 

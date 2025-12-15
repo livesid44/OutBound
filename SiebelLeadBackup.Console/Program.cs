@@ -12,14 +12,31 @@ var appSettings = new AppSettings
 {
     ConnectionString = configuration["ConnectionString"] ?? throw new Exception("ConnectionString not found in configuration"),
     SiebelApi = configuration.GetSection("SiebelApi").Get<SiebelApiSettings>() ?? throw new Exception("SiebelApi settings not found"),
-    Processing = configuration.GetSection("Processing").Get<ProcessingSettings>() ?? throw new Exception("Processing settings not found")
+    Processing = configuration.GetSection("Processing").Get<ProcessingSettings>() ?? throw new Exception("Processing settings not found"),
+    Logging = configuration.GetSection("Logging").Get<LoggingSettings>() ?? new LoggingSettings()
 };
+
+// Ensure log directory exists
+if (appSettings.Logging.EnableFileLogging)
+{
+    var logFilePath = appSettings.Logging.LogFilePath.Replace("{Date}", DateTime.Now.ToString("yyyy-MM-dd"));
+    var logDirectory = Path.GetDirectoryName(logFilePath);
+    if (!string.IsNullOrEmpty(logDirectory) && !Directory.Exists(logDirectory))
+    {
+        Directory.CreateDirectory(logDirectory);
+    }
+}
 
 using var loggerFactory = LoggerFactory.Create(builder =>
 {
     builder
-        .AddConfiguration(configuration.GetSection("Logging"))
+        .AddConfiguration(configuration.GetSection("Logging:LogLevel"))
         .AddConsole();
+    
+    if (appSettings.Logging.EnableFileLogging)
+    {
+        builder.AddFile(appSettings.Logging.LogFilePath.Replace("{Date}", DateTime.Now.ToString("yyyy-MM-dd")));
+    }
 });
 
 var databaseLogger = loggerFactory.CreateLogger<DatabaseService>();

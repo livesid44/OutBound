@@ -24,7 +24,8 @@ public class LeadProcessingService : ILeadProcessingService
 
     public async Task ProcessLeadsAsync()
     {
-        _logger.LogInformation("Starting lead processing...");
+        _logger.LogInformation("=== Starting lead processing ===");
+        _logger.LogInformation("Timestamp: {Timestamp}", DateTime.Now);
 
         try
         {
@@ -36,8 +37,10 @@ public class LeadProcessingService : ILeadProcessingService
                 return;
             }
 
-            _logger.LogInformation("Processing {Count} leads with max parallelism of {Parallelism}", 
-                leads.Count, _maxDegreeOfParallelism);
+            var totalLeads = leads.Count;
+            _logger.LogInformation("Retrieved {TotalCount} pending leads from database", totalLeads);
+            _logger.LogInformation("Processing with max parallelism of {Parallelism}", _maxDegreeOfParallelism);
+            _logger.LogInformation("Expected to process all {TotalCount} records", totalLeads);
 
             var options = new ParallelOptions
             {
@@ -46,11 +49,19 @@ public class LeadProcessingService : ILeadProcessingService
 
             var successCount = 0;
             var failureCount = 0;
+            var processedCount = 0;
+
+            var startTime = DateTime.Now;
 
             await Parallel.ForEachAsync(leads, options, async (lead, cancellationToken) =>
             {
+                var currentProcessed = Interlocked.Increment(ref processedCount);
+                
                 try
                 {
+                    _logger.LogInformation("Processing lead {Current}/{Total} - InteractionId: {InteractionId}", 
+                        currentProcessed, totalLeads, lead.Interactionid);
+
                     var (success, message) = await _siebelApiService.SendLeadDataAsync(lead);
 
                     var status = success ? "Success" : "Failed";
@@ -60,25 +71,45 @@ public class LeadProcessingService : ILeadProcessingService
                     if (success)
                     {
                         Interlocked.Increment(ref successCount);
+                        _logger.LogInformation("Lead {InteractionId} processed successfully ({Current}/{Total})", 
+                            lead.Interactionid, currentProcessed, totalLeads);
                     }
                     else
                     {
                         Interlocked.Increment(ref failureCount);
+                        _logger.LogWarning("Lead {InteractionId} processing failed: {Message} ({Current}/{Total})", 
+                            lead.Interactionid, message, currentProcessed, totalLeads);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error processing lead with InteractionId: {InteractionId}", lead.Interactionid);
                     Interlocked.Increment(ref failureCount);
+                    _logger.LogError(ex, "Exception processing lead {InteractionId} ({Current}/{Total})", 
+                        lead.Interactionid, currentProcessed, totalLeads);
                 }
             });
 
-            _logger.LogInformation("Lead processing completed. Success: {Success}, Failed: {Failed}", 
-                successCount, failureCount);
+            var endTime = DateTime.Now;
+            var duration = endTime - startTime;
+
+            _logger.LogInformation("=== Lead processing completed ===");
+            _logger.LogInformation("Total leads retrieved: {Total}", totalLeads);
+            _logger.LogInformation("Total leads processed: {Processed}", processedCount);
+            _logger.LogInformation("Successfully processed: {Success}", successCount);
+            _logger.LogInformation("Failed to process: {Failed}", failureCount);
+            _logger.LogInformation("Processing duration: {Duration}", duration);
+            _logger.LogInformation("Average time per lead: {AvgTime} ms", 
+                processedCount > 0 ? duration.TotalMilliseconds / processedCount : 0);
+
+            if (processedCount != totalLeads)
+            {
+                _logger.LogWarning("WARNING: Not all leads were processed! Expected {Total}, Processed {Processed}", 
+                    totalLeads, processedCount);
+            }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during lead processing");
+            _logger.LogError(ex, "Fatal error during lead processing");
             throw;
         }
     }
