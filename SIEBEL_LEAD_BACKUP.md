@@ -83,7 +83,7 @@ SiebelLeadBackup.Console/
 
 ## Technical Stack
 
-- **.NET 10.0**: Latest .NET runtime
+- **.NET 8.0**: Latest .NET runtime
 - **Microsoft.Data.SqlClient**: SQL Server connectivity
 - **Microsoft.Extensions.Configuration**: Configuration management
 - **Microsoft.Extensions.Logging**: Structured logging

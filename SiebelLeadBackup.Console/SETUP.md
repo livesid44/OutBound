@@ -8,7 +8,7 @@ Follow these steps to get the application up and running:
 
 Before you begin, ensure you have:
 
-- **.NET 10.0 Runtime or SDK** installed ([Download](https://dotnet.microsoft.com/download/dotnet/10.0))
+- **.NET 8.0 Runtime or SDK** installed ([Download](https://dotnet.microsoft.com/download/dotnet/8.0))
 - **SQL Server** access with the required stored procedures
 - **Network access** to the Siebel API endpoint (http://172.16.19.251:9001)
 - **Database permissions** to execute stored procedures
@@ -105,7 +105,7 @@ dotnet run
 #### Option B: Run Compiled Version
 
 ```bash
-cd SiebelLeadBackup.Console/bin/Release/net10.0
+cd SiebelLeadBackup.Console/bin/Release/net8.0
 dotnet SiebelLeadBackup.Console.dll
 ```
 

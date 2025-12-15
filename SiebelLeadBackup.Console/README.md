@@ -156,7 +156,7 @@ http://172.16.19.251:9001/siebel-rest/v1.0/service/CCCRMInbound/CCCRMInbound
 ## Building the Application
 
 ### Prerequisites
-- .NET 10.0 SDK or later
+- .NET 8.0 SDK or later
 - SQL Server access with required stored procedures
 
 ### Build Commands
@@ -172,6 +172,71 @@ dotnet build SiebelLeadBackup.sln
 dotnet build SiebelLeadBackup.sln --configuration Release
 ```
 
+## Publishing for Deployment
+
+### Important: Deployment Options
+
+To deploy the application to a server, you have two options:
+
+#### Option 1: Self-Contained (Recommended for Production)
+**Includes the .NET runtime with the application. No .NET installation required on the target machine.**
+
+```bash
+# Windows - Run publish.bat and select option 1
+publish.bat
+
+# Linux - Run publish.sh and select option 1
+./publish.sh
+
+# Or manually:
+dotnet publish --configuration Release --output ./publish --self-contained true --runtime win-x64 -p:PublishSingleFile=true
+```
+
+**Pros:**
+- No .NET runtime installation needed on target machine
+- Guaranteed runtime version compatibility
+- Single .exe file (with PublishSingleFile)
+
+**Cons:**
+- Larger file size (~70-80 MB)
+
+#### Option 2: Framework-Dependent
+**Requires .NET 8.0 Runtime to be installed on the target machine.**
+
+```bash
+# Windows - Run publish.bat and select option 2
+publish.bat
+
+# Linux - Run publish.sh and select option 2
+./publish.sh
+
+# Or manually:
+dotnet publish --configuration Release --output ./publish --self-contained false --runtime win-x64
+```
+
+**Pros:**
+- Smaller file size (~500 KB)
+
+**Cons:**
+- Requires .NET 8.0 Runtime installed on target machine
+- Download from: https://dotnet.microsoft.com/download/dotnet/8.0
+
+### Resolving "Failed to load System.Private.CoreLib.dll" Error
+
+If you encounter the error:
+```
+Failed to load System.Private.CoreLib.dll (error code 0x800700C1)
+Could not load file or assembly. is not a valid Win32 application.
+```
+
+**This means the .NET runtime is not installed or incompatible. Solutions:**
+
+1. **Use Self-Contained Deployment (Easiest)**: Re-publish using the self-contained option above. This bundles the runtime with your application.
+
+2. **Install .NET 8.0 Runtime**: Download and install the .NET 8.0 Runtime from:
+   - Windows: https://dotnet.microsoft.com/download/dotnet/8.0/runtime
+   - Ensure you install the correct architecture (x64 for 64-bit Windows)
+
 ## Running the Application
 
 ### Development Run
@@ -181,11 +246,19 @@ cd SiebelLeadBackup.Console
 dotnet run
 ```
 
-### Production Run
+### Production Run (Framework-Dependent)
 
 ```bash
-cd SiebelLeadBackup.Console/bin/Release/net10.0
-./SiebelLeadBackup.Console
+cd SiebelLeadBackup.Console/bin/Release/net8.0
+dotnet SiebelLeadBackup.Console.dll
+```
+
+### Production Run (Self-Contained)
+
+```bash
+cd publish
+./SiebelLeadBackup.Console.exe   # Windows
+./SiebelLeadBackup.Console       # Linux
 ```
 
 ### As a Windows Service or Scheduled Task
