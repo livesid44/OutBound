@@ -14,14 +14,36 @@ public class SiebelApiService : ISiebelApiService
 
     public SiebelApiService(HttpClient httpClient, SiebelApiSettings settings, ILogger<SiebelApiService> logger)
     {
-        _httpClient = httpClient;
-        _logger = logger;
+        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        
+        if (settings == null)
+            throw new ArgumentNullException(nameof(settings));
+        
+        if (string.IsNullOrWhiteSpace(settings.BaseUrl))
+            throw new ArgumentException("BaseUrl cannot be null or empty", nameof(settings));
+        
+        if (string.IsNullOrWhiteSpace(settings.Authorization))
+            throw new ArgumentException("Authorization cannot be null or empty", nameof(settings));
+        
         _authorization = settings.Authorization;
         
-        _httpClient.BaseAddress = new Uri(settings.BaseUrl);
-        _httpClient.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds);
-        _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", _authorization.Replace("Basic ", ""));
-        _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        try
+        {
+            _httpClient.BaseAddress = new Uri(settings.BaseUrl);
+            _httpClient.Timeout = TimeSpan.FromSeconds(settings.TimeoutSeconds > 0 ? settings.TimeoutSeconds : 30);
+            
+            var authValue = _authorization.Replace("Basic ", "").Trim();
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", authValue);
+            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            
+            _logger.LogInformation("SiebelApiService initialized successfully with BaseUrl: {BaseUrl}", settings.BaseUrl);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to initialize SiebelApiService");
+            throw new InvalidOperationException($"Failed to initialize Siebel API service: {ex.Message}", ex);
+        }
     }
 
     public async Task<(bool Success, string Message)> SendLeadDataAsync(LeadData lead)
