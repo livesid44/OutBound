@@ -1,0 +1,324 @@
+@using CampaignManager.Shared.Models
+@using CampaignManager.Shared.DTOs
+
+<div class="visual-designer-container">
+    @* Progress Wizard *@
+    <div class="wizard-header">
+        <div class="wizard-steps">
+            @for (int i = 1; i <= 5; i++)
+            {
+                int step = i;
+                <div class="wizard-step @(CurrentStep == step ? "active" : "") @(CompletedSteps.Contains(step) ? "completed" : "")" @onclick="() => SelectStep(step)">
+                    <div class="step-number">
+                        @if (CompletedSteps.Contains(step))
+                        {
+                            <i class="bi bi-check-lg"></i>
+                        }
+                        else
+                        {
+                            @step
+                        }
+                    </div>
+                    <div class="step-info">
+                        <div class="step-title">@GetStepTitle(step)</div>
+                        <div class="step-subtitle">@GetStepSubtitle(step)</div>
+                    </div>
+                </div>
+                @if (i < 5)
+                {
+                    <div class="step-connector @(CompletedSteps.Contains(step) ? "completed" : "")"></div>
+                }
+            }
+        </div>
+    </div>
+
+    @* Content Area *@
+    <div class="wizard-content">
+        @ChildContent
+    </div>
+</div>
+
+<style>
+    .visual-designer-container {
+        background: #f8f9fa;
+        min-height: calc(100vh - 200px);
+    }
+
+    .wizard-header {
+        background: white;
+        padding: 2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+        border-radius: 12px;
+    }
+
+    .wizard-steps {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .wizard-step {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        cursor: pointer;
+        padding: 0.75rem 1.25rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        flex: 1;
+        max-width: 220px;
+    }
+
+    .wizard-step:hover {
+        background: #f8f9fa;
+    }
+
+    .wizard-step.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .wizard-step.completed {
+        background: #e8f5e9;
+    }
+
+    .step-number {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #e9ecef;
+        font-weight: 600;
+        font-size: 1.1rem;
+        flex-shrink: 0;
+    }
+
+    .wizard-step.active .step-number {
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+    }
+
+    .wizard-step.completed .step-number {
+        background: #4caf50;
+        color: white;
+    }
+
+    .step-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .step-title {
+        font-weight: 600;
+        font-size: 0.95rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .step-subtitle {
+        font-size: 0.75rem;
+        opacity: 0.7;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .wizard-step.active .step-subtitle {
+        opacity: 0.9;
+    }
+
+    .step-connector {
+        height: 3px;
+        background: #dee2e6;
+        flex: 0 0 40px;
+        transition: all 0.3s ease;
+    }
+
+    .step-connector.completed {
+        background: #4caf50;
+    }
+
+    .wizard-content {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 1rem 2rem;
+    }
+
+    /* Visual Designer Content Styles */
+    .visual-designer-content {
+        background: white;
+        border-radius: 12px;
+        padding: 2.5rem;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    .content-header {
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px solid #f0f0f0;
+    }
+
+    .content-header h4 {
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+
+    .info-card {
+        background: #f8f9fa;
+        border-left: 4px solid #667eea;
+        padding: 1.25rem;
+        border-radius: 8px;
+        height: 100%;
+    }
+
+    .info-label {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+        display: block;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .info-value {
+        font-size: 1.1rem;
+        color: #2c3e50;
+        font-weight: 500;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+    }
+
+    .channel-section {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        border: 1px solid #e9ecef;
+    }
+
+    .channel-title {
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+
+    .strategy-group {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        border-left: 4px solid #667eea;
+    }
+
+    .summary-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        padding: 1.5rem;
+        height: 100%;
+    }
+
+    .summary-title {
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 2px solid #e9ecef;
+        color: #2c3e50;
+    }
+
+    .summary-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+    }
+
+    .summary-label {
+        font-weight: 600;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+
+    .summary-value {
+        color: #2c3e50;
+        font-weight: 500;
+    }
+
+    @@media (max-width: 768px) {
+        .wizard-steps {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .wizard-step {
+            max-width: 100%;
+        }
+
+        .step-connector {
+            height: 40px;
+            width: 3px;
+            margin: 0 auto;
+        }
+
+        .visual-designer-content {
+            padding: 1.5rem;
+        }
+    }
+</style>
+
+@code {
+    [Parameter]
+    public int CurrentStep { get; set; } = 1;
+
+    [Parameter]
+    public EventCallback<int> CurrentStepChanged { get; set; }
+
+    [Parameter]
+    public HashSet<int> CompletedSteps { get; set; } = new();
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private string GetStepTitle(int step) => step switch
+    {
+        1 => "Overview",
+        2 => "Data Fields",
+        3 => "API Setup",
+        4 => "Strategy",
+        5 => "Review & Launch",
+        _ => ""
+    };
+
+    private string GetStepSubtitle(int step) => step switch
+    {
+        1 => "Campaign info",
+        2 => "Define structure",
+        3 => "Configure channels",
+        4 => "Retry logic",
+        5 => "Activate",
+        _ => ""
+    };
+
+    private async Task SelectStep(int step)
+    {
+        CurrentStep = step;
+        await CurrentStepChanged.InvokeAsync(step);
+    }
+}
