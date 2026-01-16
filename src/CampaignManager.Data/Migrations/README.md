@@ -64,4 +64,5 @@ dotnet ef migrations script --project ../CampaignManager.Data --context Campaign
 - **Never modify migration files after they've been applied to production databases**
 - Always create a new migration for schema changes
 - Test migrations on a development database before deploying to production
-- The seed data is defined in `CampaignDbContext.SeedData()` and is included in the InitialCreate migration
+- The seed data is defined in `CampaignDbContext.OnModelCreating()` and is automatically included when creating migrations
+- When you create a new database, the `InitialCreate` migration will automatically insert the seed data
