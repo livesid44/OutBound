@@ -9,17 +9,35 @@
     <Authorized>
         <div class="dashboard">
             <!-- SIDEBAR -->
-            <div class="sidebar">
-                <div class="logo-area">
-                    <img src="images/protonect_logo_white.png" alt="logo" class="logo">
-                </div>
-                <NavMenu />
+            <div class="sidebar @(_isSidebarMinimized ? "minimized" : "")">
+                @if (!_isSidebarMinimized)
+                {
+                    <div class="logo-area">
+                        <img src="images/protonect_logo_white.png" alt="logo" class="logo">
+                    </div>
+                }
+                <NavMenu IsMinimized="@_isSidebarMinimized" />
             </div>
 
             <!-- MAIN PAGE -->
-            <div class="main">
+            <div class="main @(_isSidebarMinimized ? "expanded" : "")">
                 <div class="dashboard_header d-flex justify-content-between align-items-center px-4">
-                    <div class="d-flex align-items-center">
+                    <div class="d-flex align-items-center gap-3">
+                        <!-- Menu Toggle Button -->
+                        <button class="btn btn-link text-dark p-0 menu-toggle-btn" @onclick="ToggleSidebar" title="@(_isSidebarMinimized ? "Expand Menu" : "Minimize Menu")">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="3" y1="12" x2="21" y2="12"></line>
+                                <line x1="3" y1="6" x2="21" y2="6"></line>
+                                <line x1="3" y1="18" x2="21" y2="18"></line>
+                            </svg>
+                        </button>
+
+                        <!-- Logo in header when sidebar is minimized -->
+                        @if (_isSidebarMinimized)
+                        {
+                            <img src="images/protonect_logo_white.png" alt="logo" class="header-logo">
+                        }
+
                         @if (_isSuperAdmin)
                         {
                             <div class="tenant-selector d-flex align-items-center">
@@ -72,6 +90,7 @@
     private string _selectedProjectId = "";
     private string? _selectedProjectName;
     private bool _isSuperAdmin = false;
+    private bool _isSidebarMinimized = true; // Start minimized by default
 
     protected override async Task OnInitializedAsync()
     {
@@ -144,5 +163,10 @@
     {
         await AuthService.LogoutAsync();
         Navigation.NavigateTo("login");
+    }
+
+    private void ToggleSidebar()
+    {
+        _isSidebarMinimized = !_isSidebarMinimized;
     }
 }
