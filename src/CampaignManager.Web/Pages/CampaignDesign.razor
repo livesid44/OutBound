@@ -240,9 +240,253 @@ else if (campaign != null)
                         </div>
                     }
 
-                    @if (!HasChannel(ChannelType.Email) && !HasChannel(ChannelType.Call))
+                    @* Voice Blast Configuration Section *@
+                    @if (HasChannel(ChannelType.VoiceBot))
                     {
-                        <p class="text-muted">Selected channels are coming soon!</p>
+                        <div class="mb-4">
+                            <h6 class="text-info"><i class="bi bi-robot"></i> Voice Blast Configuration</h6>
+                            <hr />
+                            <EditForm Model="@apiConfig" OnValidSubmit="SaveApiConfig">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">API Endpoint</label>
+                                        <InputText class="form-control" @bind-Value="apiConfig.VoiceBlastApiEndpoint" placeholder="https://api.voiceblast.com/v1/campaigns" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">API Key</label>
+                                        <InputText class="form-control" @bind-Value="apiConfig.VoiceBlastApiKey" type="password" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Campaign ID (optional)</label>
+                                        <InputText class="form-control" @bind-Value="apiConfig.VoiceBlastCampaignId" />
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Voice Message Script</label>
+                                    <div class="input-group mb-2">
+                                        <InputTextArea class="form-control" @bind-Value="apiConfig.VoiceBlastMessage" rows="4" 
+                                                       placeholder="Enter voice message script. Use {{FieldName}} for dynamic content." />
+                                    </div>
+                                    <div class="card bg-light">
+                                        <div class="card-body py-2">
+                                            <small class="text-muted d-block mb-1">Click to insert dynamic field placeholders:</small>
+                                            <div class="d-flex flex-wrap gap-1">
+                                                @foreach (var field in campaign.Fields)
+                                                {
+                                                    <button type="button" class="btn btn-sm btn-outline-info" @onclick="() => InsertFieldToVoiceBlast(field.FieldName)">
+                                                        {{@field.FieldName}}
+                                                    </button>
+                                                }
+                                                @if (!campaign.Fields.Any())
+                                                {
+                                                    <span class="text-muted">No fields defined. Add fields in Step 2 first.</span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">Example: Hello {{FirstName}}, this is a reminder about your appointment on {{AppointmentDate}}.</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Parameter Mappings (JSON)</label>
+                                    <InputTextArea class="form-control font-monospace" @bind-Value="apiConfig.VoiceBlastParameterMappings" rows="4" 
+                                                   placeholder='{"phone": "{{PhoneNumber}}", "customer_name": "{{FirstName}} {{LastName}}"}'/>
+                                    <small class="text-muted">Map API parameters to lead fields using {{FieldName}} syntax</small>
+                                </div>
+                                <button type="submit" class="btn btn-success">Save Voice Blast Configuration</button>
+                            </EditForm>
+                        </div>
+                    }
+
+                    @* WhatsApp Configuration Section *@
+                    @if (HasChannel(ChannelType.WhatsApp))
+                    {
+                        <div class="mb-4">
+                            <h6 class="text-success"><i class="bi bi-whatsapp"></i> WhatsApp Configuration</h6>
+                            <hr />
+                            <EditForm Model="@apiConfig" OnValidSubmit="SaveApiConfig">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">API Endpoint</label>
+                                        <InputText class="form-control" @bind-Value="apiConfig.WhatsAppApiEndpoint" placeholder="https://api.twilio.com/2010-04-01" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">API Key / Auth Token</label>
+                                        <InputText class="form-control" @bind-Value="apiConfig.WhatsAppApiKey" type="password" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Account SID</label>
+                                        <InputText class="form-control" @bind-Value="apiConfig.WhatsAppAccountSid" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Auth Token</label>
+                                        <InputText class="form-control" @bind-Value="apiConfig.WhatsAppAuthToken" type="password" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">From Number (with country code)</label>
+                                        <InputText class="form-control" @bind-Value="apiConfig.WhatsAppFromNumber" placeholder="whatsapp:+14155238886" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Template Name (optional - for pre-approved templates)</label>
+                                        <InputText class="form-control" @bind-Value="apiConfig.WhatsAppTemplateName" />
+                                    </div>
+                                </div>
+
+                                @* WhatsApp Template Designer *@
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label mb-0">WhatsApp Message Template</label>
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn @(showWhatsAppEditor ? "btn-primary" : "btn-outline-primary")" @onclick="() => showWhatsAppEditor = true">
+                                                Edit
+                                            </button>
+                                            <button type="button" class="btn @(!showWhatsAppEditor ? "btn-primary" : "btn-outline-primary")" @onclick="() => showWhatsAppEditor = false">
+                                                Preview
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    @* Field Picker Panel *@
+                                    <div class="card mb-2 bg-light">
+                                        <div class="card-body py-2">
+                                            <small class="text-muted d-block mb-1">Click to insert dynamic field placeholders:</small>
+                                            <div class="d-flex flex-wrap gap-1">
+                                                @foreach (var field in campaign.Fields)
+                                                {
+                                                    <button type="button" class="btn btn-sm btn-outline-success" @onclick="() => InsertFieldToWhatsApp(field.FieldName)">
+                                                        {{@field.FieldName}}
+                                                    </button>
+                                                }
+                                                @if (!campaign.Fields.Any())
+                                                {
+                                                    <span class="text-muted">No fields defined. Add fields in Step 2 first.</span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    @if (showWhatsAppEditor)
+                                    {
+                                        <InputTextArea class="form-control" @bind-Value="apiConfig.WhatsAppTemplate" rows="6" 
+                                                       placeholder="Enter your WhatsApp message template. Use {{FieldName}} for dynamic content." />
+                                    }
+                                    else
+                                    {
+                                        <div class="border rounded p-3 bg-white whatsapp-preview" style="min-height: 150px;">
+                                            @if (!string.IsNullOrEmpty(apiConfig.WhatsAppTemplate))
+                                            {
+                                                @((MarkupString)GetWhatsAppPreview())
+                                            }
+                                            else
+                                            {
+                                                <p class="text-muted">No template content yet. Switch to Edit to create your WhatsApp message template.</p>
+                                            }
+                                        </div>
+                                    }
+                                    <small class="text-muted">Use {{FieldName}} syntax. Example: Hi {{FirstName}}, your order {{OrderNumber}} is ready!</small>
+                                </div>
+
+                                <button type="submit" class="btn btn-success">Save WhatsApp Configuration</button>
+                            </EditForm>
+                        </div>
+                    }
+
+                    @* SMS Configuration Section *@
+                    @if (HasChannel(ChannelType.SMS))
+                    {
+                        <div class="mb-4">
+                            <h6 class="text-primary"><i class="bi bi-chat-dots"></i> SMS Configuration</h6>
+                            <hr />
+                            <EditForm Model="@apiConfig" OnValidSubmit="SaveApiConfig">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">API Endpoint</label>
+                                        <InputText class="form-control" @bind-Value="apiConfig.SmsApiEndpoint" placeholder="https://api.twilio.com/2010-04-01" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">API Key / Auth Token</label>
+                                        <InputText class="form-control" @bind-Value="apiConfig.SmsApiKey" type="password" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Account SID</label>
+                                        <InputText class="form-control" @bind-Value="apiConfig.SmsAccountSid" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Auth Token</label>
+                                        <InputText class="form-control" @bind-Value="apiConfig.SmsAuthToken" type="password" />
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">From Number (with country code)</label>
+                                        <InputText class="form-control" @bind-Value="apiConfig.SmsFromNumber" placeholder="+14155238886" />
+                                    </div>
+                                </div>
+
+                                @* SMS Template Designer *@
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label mb-0">SMS Message Template</label>
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn @(showSmsEditor ? "btn-primary" : "btn-outline-primary")" @onclick="() => showSmsEditor = true">
+                                                Edit
+                                            </button>
+                                            <button type="button" class="btn @(!showSmsEditor ? "btn-primary" : "btn-outline-primary")" @onclick="() => showSmsEditor = false">
+                                                Preview
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    @* Field Picker Panel *@
+                                    <div class="card mb-2 bg-light">
+                                        <div class="card-body py-2">
+                                            <small class="text-muted d-block mb-1">Click to insert dynamic field placeholders:</small>
+                                            <div class="d-flex flex-wrap gap-1">
+                                                @foreach (var field in campaign.Fields)
+                                                {
+                                                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => InsertFieldToSms(field.FieldName)">
+                                                        {{@field.FieldName}}
+                                                    </button>
+                                                }
+                                                @if (!campaign.Fields.Any())
+                                                {
+                                                    <span class="text-muted">No fields defined. Add fields in Step 2 first.</span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    @if (showSmsEditor)
+                                    {
+                                        <InputTextArea class="form-control" @bind-Value="apiConfig.SmsTemplate" rows="4" 
+                                                       placeholder="Enter your SMS message template. Use {{FieldName}} for dynamic content. Max 1600 chars." 
+                                                       maxlength="1600" />
+                                        <small class="text-muted d-block mt-1">
+                                            Character count: @(apiConfig.SmsTemplate?.Length ?? 0) / 1600 
+                                            (Standard SMS: 160 chars, longer messages may be split)
+                                        </small>
+                                    }
+                                    else
+                                    {
+                                        <div class="border rounded p-3 bg-white sms-preview" style="min-height: 120px;">
+                                            @if (!string.IsNullOrEmpty(apiConfig.SmsTemplate))
+                                            {
+                                                @((MarkupString)GetSmsPreview())
+                                            }
+                                            else
+                                            {
+                                                <p class="text-muted">No template content yet. Switch to Edit to create your SMS template.</p>
+                                            }
+                                        </div>
+                                    }
+                                    <small class="text-muted">Use {{FieldName}} syntax. Example: Hi {{FirstName}}! Your order {{OrderNumber}} ships today.</small>
+                                </div>
+
+                                <button type="submit" class="btn btn-success">Save SMS Configuration</button>
+                            </EditForm>
+                        </div>
+                    }
+
+                    @if (!HasChannel(ChannelType.Email) && !HasChannel(ChannelType.Call) && !HasChannel(ChannelType.VoiceBot) && !HasChannel(ChannelType.WhatsApp) && !HasChannel(ChannelType.SMS))
+                    {
+                        <p class="text-muted">No channels selected. Please select at least one channel.</p>
                     }
                 </div>
             </div>
@@ -274,6 +518,39 @@ else if (campaign != null)
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label">Call Retry Interval (minutes)</label>
                                     <InputNumber class="form-control" @bind-Value="strategy.CallRetryIntervalMinutes" />
+                                </div>
+                            }
+                            @if (HasChannel(ChannelType.VoiceBot))
+                            {
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Max Voice Blast Attempts</label>
+                                    <InputNumber class="form-control" @bind-Value="strategy.MaxVoiceBlastAttempts" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Voice Blast Retry Interval (minutes)</label>
+                                    <InputNumber class="form-control" @bind-Value="strategy.VoiceBlastRetryIntervalMinutes" />
+                                </div>
+                            }
+                            @if (HasChannel(ChannelType.WhatsApp))
+                            {
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Max WhatsApp Attempts</label>
+                                    <InputNumber class="form-control" @bind-Value="strategy.MaxWhatsAppAttempts" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">WhatsApp Retry Interval (minutes)</label>
+                                    <InputNumber class="form-control" @bind-Value="strategy.WhatsAppRetryIntervalMinutes" />
+                                </div>
+                            }
+                            @if (HasChannel(ChannelType.SMS))
+                            {
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">Max SMS Attempts</label>
+                                    <InputNumber class="form-control" @bind-Value="strategy.MaxSmsAttempts" />
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label">SMS Retry Interval (minutes)</label>
+                                    <InputNumber class="form-control" @bind-Value="strategy.SmsRetryIntervalMinutes" />
                                 </div>
                             }
                             <div class="col-md-6 mb-3">
@@ -354,6 +631,8 @@ else if (campaign != null)
     private bool isLoading = true;
     private bool showFieldModal = false;
     private bool showHtmlEditor = true;
+    private bool showWhatsAppEditor = true;
+    private bool showSmsEditor = true;
     private string? successMessage;
     private string? errorMessage;
 
@@ -381,7 +660,25 @@ else if (campaign != null)
                     WebExApiEndpoint = campaign.ApiConfig.WebExApiEndpoint,
                     WebExAuthToken = campaign.ApiConfig.WebExAuthToken,
                     WebExCurl = campaign.ApiConfig.WebExCurl,
-                    ParameterMappings = campaign.ApiConfig.ParameterMappings
+                    ParameterMappings = campaign.ApiConfig.ParameterMappings,
+                    VoiceBlastApiEndpoint = campaign.ApiConfig.VoiceBlastApiEndpoint,
+                    VoiceBlastApiKey = campaign.ApiConfig.VoiceBlastApiKey,
+                    VoiceBlastCampaignId = campaign.ApiConfig.VoiceBlastCampaignId,
+                    VoiceBlastMessage = campaign.ApiConfig.VoiceBlastMessage,
+                    VoiceBlastParameterMappings = campaign.ApiConfig.VoiceBlastParameterMappings,
+                    WhatsAppApiEndpoint = campaign.ApiConfig.WhatsAppApiEndpoint,
+                    WhatsAppApiKey = campaign.ApiConfig.WhatsAppApiKey,
+                    WhatsAppAccountSid = campaign.ApiConfig.WhatsAppAccountSid,
+                    WhatsAppAuthToken = campaign.ApiConfig.WhatsAppAuthToken,
+                    WhatsAppFromNumber = campaign.ApiConfig.WhatsAppFromNumber,
+                    WhatsAppTemplate = campaign.ApiConfig.WhatsAppTemplate,
+                    WhatsAppTemplateName = campaign.ApiConfig.WhatsAppTemplateName,
+                    SmsApiEndpoint = campaign.ApiConfig.SmsApiEndpoint,
+                    SmsApiKey = campaign.ApiConfig.SmsApiKey,
+                    SmsAccountSid = campaign.ApiConfig.SmsAccountSid,
+                    SmsAuthToken = campaign.ApiConfig.SmsAuthToken,
+                    SmsFromNumber = campaign.ApiConfig.SmsFromNumber,
+                    SmsTemplate = campaign.ApiConfig.SmsTemplate
                 };
             }
             if (campaign?.Strategy != null)
@@ -390,8 +687,14 @@ else if (campaign != null)
                 {
                     MaxEmailAttempts = campaign.Strategy.MaxEmailAttempts,
                     MaxCallAttempts = campaign.Strategy.MaxCallAttempts,
+                    MaxVoiceBlastAttempts = campaign.Strategy.MaxVoiceBlastAttempts,
+                    MaxWhatsAppAttempts = campaign.Strategy.MaxWhatsAppAttempts,
+                    MaxSmsAttempts = campaign.Strategy.MaxSmsAttempts,
                     EmailRetryIntervalMinutes = campaign.Strategy.EmailRetryIntervalMinutes,
                     CallRetryIntervalMinutes = campaign.Strategy.CallRetryIntervalMinutes,
+                    VoiceBlastRetryIntervalMinutes = campaign.Strategy.VoiceBlastRetryIntervalMinutes,
+                    WhatsAppRetryIntervalMinutes = campaign.Strategy.WhatsAppRetryIntervalMinutes,
+                    SmsRetryIntervalMinutes = campaign.Strategy.SmsRetryIntervalMinutes,
                     WorkingDays = campaign.Strategy.WorkingDays
                 };
             }
@@ -575,4 +878,59 @@ else if (campaign != null)
         CampaignStatus.Archived => "bg-dark",
         _ => "bg-secondary"
     };
+
+    private void InsertFieldToVoiceBlast(string fieldName)
+    {
+        apiConfig.VoiceBlastMessage = (apiConfig.VoiceBlastMessage ?? "") + "{{" + fieldName + "}}";
+    }
+
+    private void InsertFieldToWhatsApp(string fieldName)
+    {
+        apiConfig.WhatsAppTemplate = (apiConfig.WhatsAppTemplate ?? "") + "{{" + fieldName + "}}";
+    }
+
+    private void InsertFieldToSms(string fieldName)
+    {
+        apiConfig.SmsTemplate = (apiConfig.SmsTemplate ?? "") + "{{" + fieldName + "}}";
+    }
+
+    private string GetWhatsAppPreview()
+    {
+        var text = apiConfig.WhatsAppTemplate ?? "";
+        
+        // Replace field placeholders with sample values for preview
+        if (campaign?.Fields != null)
+        {
+            foreach (var field in campaign.Fields)
+            {
+                var safeDisplayName = System.Net.WebUtility.HtmlEncode(field.DisplayName ?? field.FieldName);
+                text = text.Replace("{{" + field.FieldName + "}}", $"<span class='badge bg-success'>[{safeDisplayName}]</span>");
+            }
+        }
+        
+        // Convert line breaks to <br> for HTML display
+        text = text.Replace("\n", "<br>");
+        
+        return text;
+    }
+
+    private string GetSmsPreview()
+    {
+        var text = apiConfig.SmsTemplate ?? "";
+        
+        // Replace field placeholders with sample values for preview
+        if (campaign?.Fields != null)
+        {
+            foreach (var field in campaign.Fields)
+            {
+                var safeDisplayName = System.Net.WebUtility.HtmlEncode(field.DisplayName ?? field.FieldName);
+                text = text.Replace("{{" + field.FieldName + "}}", $"<span class='badge bg-primary'>[{safeDisplayName}]</span>");
+            }
+        }
+        
+        // Convert line breaks to <br> for HTML display
+        text = text.Replace("\n", "<br>");
+        
+        return text;
+    }
 }

@@ -18,9 +18,21 @@ public class CampaignStrategy
 
     public int MaxCallAttempts { get; set; } = 3;
 
+    public int MaxVoiceBlastAttempts { get; set; } = 3;
+
+    public int MaxWhatsAppAttempts { get; set; } = 3;
+
+    public int MaxSmsAttempts { get; set; } = 3;
+
     public int EmailRetryIntervalMinutes { get; set; } = 60;
 
     public int CallRetryIntervalMinutes { get; set; } = 30;
+
+    public int VoiceBlastRetryIntervalMinutes { get; set; } = 30;
+
+    public int WhatsAppRetryIntervalMinutes { get; set; } = 60;
+
+    public int SmsRetryIntervalMinutes { get; set; } = 60;
 
     // Working hours for calling
     public TimeSpan? CallStartTime { get; set; }

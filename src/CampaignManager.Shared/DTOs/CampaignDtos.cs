@@ -85,6 +85,30 @@ public class CampaignApiConfigDto
     public string? WebExAuthToken { get; set; }
     public string? ParameterMappings { get; set; }
     public string? TokenGenerationConfig { get; set; }
+    
+    // Voice Blast
+    public string? VoiceBlastApiEndpoint { get; set; }
+    public string? VoiceBlastApiKey { get; set; }
+    public string? VoiceBlastCampaignId { get; set; }
+    public string? VoiceBlastMessage { get; set; }
+    public string? VoiceBlastParameterMappings { get; set; }
+    
+    // WhatsApp
+    public string? WhatsAppApiEndpoint { get; set; }
+    public string? WhatsAppApiKey { get; set; }
+    public string? WhatsAppAccountSid { get; set; }
+    public string? WhatsAppAuthToken { get; set; }
+    public string? WhatsAppFromNumber { get; set; }
+    public string? WhatsAppTemplate { get; set; }
+    public string? WhatsAppTemplateName { get; set; }
+    
+    // SMS
+    public string? SmsApiEndpoint { get; set; }
+    public string? SmsApiKey { get; set; }
+    public string? SmsAccountSid { get; set; }
+    public string? SmsAuthToken { get; set; }
+    public string? SmsFromNumber { get; set; }
+    public string? SmsTemplate { get; set; }
 }
 
 public class UpdateApiConfigRequest
@@ -100,6 +124,30 @@ public class UpdateApiConfigRequest
     public string? WebExAuthToken { get; set; }
     public string? ParameterMappings { get; set; }
     public string? TokenGenerationConfig { get; set; }
+    
+    // Voice Blast
+    public string? VoiceBlastApiEndpoint { get; set; }
+    public string? VoiceBlastApiKey { get; set; }
+    public string? VoiceBlastCampaignId { get; set; }
+    public string? VoiceBlastMessage { get; set; }
+    public string? VoiceBlastParameterMappings { get; set; }
+    
+    // WhatsApp
+    public string? WhatsAppApiEndpoint { get; set; }
+    public string? WhatsAppApiKey { get; set; }
+    public string? WhatsAppAccountSid { get; set; }
+    public string? WhatsAppAuthToken { get; set; }
+    public string? WhatsAppFromNumber { get; set; }
+    public string? WhatsAppTemplate { get; set; }
+    public string? WhatsAppTemplateName { get; set; }
+    
+    // SMS
+    public string? SmsApiEndpoint { get; set; }
+    public string? SmsApiKey { get; set; }
+    public string? SmsAccountSid { get; set; }
+    public string? SmsAuthToken { get; set; }
+    public string? SmsFromNumber { get; set; }
+    public string? SmsTemplate { get; set; }
 }
 
 public class CampaignStrategyDto
@@ -107,8 +155,14 @@ public class CampaignStrategyDto
     public Guid Id { get; set; }
     public int MaxEmailAttempts { get; set; }
     public int MaxCallAttempts { get; set; }
+    public int MaxVoiceBlastAttempts { get; set; }
+    public int MaxWhatsAppAttempts { get; set; }
+    public int MaxSmsAttempts { get; set; }
     public int EmailRetryIntervalMinutes { get; set; }
     public int CallRetryIntervalMinutes { get; set; }
+    public int VoiceBlastRetryIntervalMinutes { get; set; }
+    public int WhatsAppRetryIntervalMinutes { get; set; }
+    public int SmsRetryIntervalMinutes { get; set; }
     public TimeSpan? CallStartTime { get; set; }
     public TimeSpan? CallEndTime { get; set; }
     public string? WorkingDays { get; set; }
@@ -119,8 +173,14 @@ public class UpdateStrategyRequest
 {
     public int? MaxEmailAttempts { get; set; }
     public int? MaxCallAttempts { get; set; }
+    public int? MaxVoiceBlastAttempts { get; set; }
+    public int? MaxWhatsAppAttempts { get; set; }
+    public int? MaxSmsAttempts { get; set; }
     public int? EmailRetryIntervalMinutes { get; set; }
     public int? CallRetryIntervalMinutes { get; set; }
+    public int? VoiceBlastRetryIntervalMinutes { get; set; }
+    public int? WhatsAppRetryIntervalMinutes { get; set; }
+    public int? SmsRetryIntervalMinutes { get; set; }
     public TimeSpan? CallStartTime { get; set; }
     public TimeSpan? CallEndTime { get; set; }
     public string? WorkingDays { get; set; }
