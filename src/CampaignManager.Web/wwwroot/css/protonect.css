@@ -252,7 +252,13 @@ a.forgot-pass {
     width: 82%;
     height: 100vh;
     overflow-y: auto;
+    transition: width 0.3s ease;
 }
+
+.main.expanded {
+    width: calc(100% - 80px); /* When sidebar is minimized */
+}
+
 /* -----------------------------------
    SIDEBAR LAYOUT
 ----------------------------------- */
@@ -264,6 +270,33 @@ a.forgot-pass {
     overflow: auto;
     padding: 20px;
     color: white;
+    transition: width 0.3s ease, padding 0.3s ease;
+}
+
+.sidebar.minimized {
+    width: 80px;
+    padding: 20px 10px;
+}
+
+.sidebar.minimized .logo-area {
+    display: none;
+}
+
+.sidebar.minimized .menu {
+    margin-top: 20px;
+}
+
+.sidebar.minimized .sb_nav_item {
+    justify-content: center;
+    padding: 12px 8px;
+}
+
+.sidebar.minimized .sb_nav_item span {
+    display: none;
+}
+
+.sidebar.minimized .sb_nav_item svg:last-child {
+    display: none; /* Hide dropdown arrow */
 }
 
 .logo-area {
@@ -273,6 +306,28 @@ a.forgot-pass {
 
 .logo {
     width: 200px;
+    display: block;
+}
+
+.header-logo {
+    width: 150px;
+    display: block;
+}
+
+.menu-toggle-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.menu-toggle-btn:hover {
+    background-color: #f0f0f0;
+}
+
+.menu-toggle-btn svg {
     display: block;
 }
 
