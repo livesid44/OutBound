@@ -111,7 +111,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Initialize database
+// Initialize database using migrations
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<CampaignDbContext>();
@@ -128,31 +128,22 @@ using (var scope = app.Services.CreateScope())
     
     try
     {
-        // Try to ensure database is created
-        var created = await dbContext.Database.EnsureCreatedAsync();
-        if (created)
+        // Apply any pending migrations automatically
+        var pendingMigrations = await dbContext.Database.GetPendingMigrationsAsync();
+        if (pendingMigrations.Any())
         {
-            logger.LogInformation("Database created successfully with seed data.");
+            logger.LogInformation("Applying {Count} pending migration(s)...", pendingMigrations.Count());
+            await dbContext.Database.MigrateAsync();
+            logger.LogInformation("Database migrations applied successfully.");
         }
         else
         {
-            logger.LogInformation("Database already exists.");
+            logger.LogInformation("Database is up to date. No pending migrations.");
         }
         
         // Verify the schema by performing a simple query
-        // This will throw an exception if columns are missing
         var testQuery = await dbContext.Users.Take(1).Select(u => new { u.Id, u.FirstName, u.LastName, u.Email }).ToListAsync();
         logger.LogInformation("Database schema verified successfully. Found {Count} users in database.", testQuery.Count);
-    }
-    catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Message.Contains("Invalid column name") || ex.Message.Contains("Invalid object name"))
-    {
-        // Schema is outdated - recreate the database
-        logger.LogWarning("Database schema is outdated. Recreating database...");
-        
-        await dbContext.Database.EnsureDeletedAsync();
-        await dbContext.Database.EnsureCreatedAsync();
-        
-        logger.LogInformation("Database recreated successfully with new schema and seed data.");
     }
     catch (Exception ex)
     {
