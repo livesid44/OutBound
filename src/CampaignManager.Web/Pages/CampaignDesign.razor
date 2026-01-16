@@ -3,12 +3,21 @@
 @inject IApiService ApiService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
+@using CampaignManager.Web.Components
 
 <PageTitle>Design Campaign - Campaign Manager</PageTitle>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>Design Campaign</h1>
-    <button class="btn btn-outline-secondary" @onclick="GoBack">Back to Campaigns</button>
+    <div class="d-flex gap-2">
+        <button class="btn btn-sm @(useCanvasView ? "btn-primary" : "btn-outline-primary")" @onclick="() => useCanvasView = true">
+            <i class="bi bi-diagram-3"></i> Canvas View
+        </button>
+        <button class="btn btn-sm @(!useCanvasView ? "btn-primary" : "btn-outline-primary")" @onclick="() => useCanvasView = false">
+            <i class="bi bi-list-ul"></i> List View
+        </button>
+        <button class="btn btn-outline-secondary" @onclick="GoBack">Back to Campaigns</button>
+    </div>
 </div>
 
 @if (!string.IsNullOrEmpty(successMessage))
@@ -37,8 +46,75 @@
 }
 else if (campaign != null)
 {
-    <div class="row">
-        <div class="col-12">
+    @if (useCanvasView)
+    {
+        <CampaignCanvas CurrentStep="@currentStep" CurrentStepChanged="@OnStepChanged" CompletedSteps="@completedSteps">
+            @if (currentStep == 1)
+            {
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Basic Details</h5>
+                        <span class="badge @GetStatusBadgeClass(campaign.Status)">@campaign.Status</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Name:</strong> @campaign.Name</p>
+                                <p><strong>Description:</strong> @(campaign.Description ?? "N/A")</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Channels:</strong> @GetChannelsDisplay(campaign.Channels)</p>
+                                <p><strong>Created:</strong> @campaign.CreatedAt.ToString("yyyy-MM-dd HH:mm")</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end">
+                    <button class="btn btn-primary" @onclick="() => currentStep = 2">Next: Define Fields <i class="bi bi-arrow-right"></i></button>
+                </div>
+            }
+            else if (currentStep == 2 || currentStep == 3 || currentStep == 4)
+            {
+                @* For these steps, show the full content in list view mode temporarily *@
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Complex configuration steps work best in List View. Switch to List View to configure fields, APIs, and strategies.
+                </div>
+                <div class="d-flex justify-content-between">
+                    <button class="btn btn-outline-secondary" @onclick="() => currentStep = currentStep > 1 ? currentStep - 1 : 1">
+                        <i class="bi bi-arrow-left"></i> Previous
+                    </button>
+                    <button class="btn btn-primary" @onclick="() => currentStep = currentStep < 5 ? currentStep + 1 : 5">
+                        Next <i class="bi bi-arrow-right"></i>
+                    </button>
+                </div>
+            }
+            else if (currentStep == 5)
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-rocket display-1 text-primary mb-4"></i>
+                    <h3>Ready to Launch!</h3>
+                    <p class="text-muted mb-4">Your campaign is configured and ready to go. Activate it to start processing leads.</p>
+                    <div class="d-flex justify-content-center gap-2">
+                        <button class="btn btn-outline-secondary" @onclick="() => currentStep = 4">
+                            <i class="bi bi-arrow-left"></i> Previous
+                        </button>
+                        <button class="btn btn-success btn-lg" @onclick="ActivateCampaign">
+                            <i class="bi bi-rocket-takeoff me-2"></i>Activate Campaign
+                        </button>
+                        <button class="btn btn-outline-primary" @onclick="GoToDataUpload">
+                            <i class="bi bi-upload me-2"></i>Upload Data
+                        </button>
+                    </div>
+                </div>
+            }
+        </CampaignCanvas>
+    }
+    else
+    {
+        @* Original List View *@
+        <div class="row">
+            <div class="col-12">
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Step 1: Basic Details</h5>
@@ -569,6 +645,7 @@ else if (campaign != null)
             </div>
         </div>
     </div>
+    }
 }
 
 @if (showFieldModal)
@@ -633,6 +710,9 @@ else if (campaign != null)
     private bool showHtmlEditor = true;
     private bool showWhatsAppEditor = true;
     private bool showSmsEditor = true;
+    private bool useCanvasView = false;
+    private int currentStep = 1;
+    private HashSet<int> completedSteps = new HashSet<int>();
     private string? successMessage;
     private string? errorMessage;
 
@@ -704,6 +784,8 @@ else if (campaign != null)
         {
             isLoading = false;
         }
+        
+        UpdateCompletedSteps();
     }
 
     private void ClearMessages()
@@ -933,4 +1015,45 @@ else if (campaign != null)
         
         return text;
     }
+
+    private void OnStepChanged(int step)
+    {
+        currentStep = step;
+        UpdateCompletedSteps();
+        StateHasChanged();
+    }
+
+    private void UpdateCompletedSteps()
+    {
+        // Mark step 1 as completed if campaign has basic details
+        if (!string.IsNullOrEmpty(campaign?.Name))
+        {
+            completedSteps.Add(1);
+        }
+
+        // Mark step 2 as completed if fields are defined
+        if (campaign?.Fields?.Any() == true)
+        {
+            completedSteps.Add(2);
+        }
+
+        // Mark step 3 as completed if API config has been set
+        if (campaign?.ApiConfig != null)
+        {
+            completedSteps.Add(3);
+        }
+
+        // Mark step 4 as completed if strategy has been set
+        if (campaign?.Strategy != null)
+        {
+            completedSteps.Add(4);
+        }
+
+        // Mark step 5 as completed if campaign is active
+        if (campaign?.Status == CampaignStatus.Active)
+        {
+            completedSteps.Add(5);
+        }
+    }
 }
+
